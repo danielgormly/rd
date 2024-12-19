@@ -19,59 +19,71 @@ class Node234 {
   is4Node() {
     return this.keys.length === 3;
   }
-  print() {
-    return `${this.keys.join(",")}`;
-    // children: this.children.map((c) => c.toJSON()),
+  print(depth = 0) {
+    let i = depth;
+    let depthMarker = "";
+    while (i > 0) {
+      depthMarker += "--";
+      i--;
+    }
+    const keys = `[${this.keys.join(",")}]`;
+    console.log(`${depthMarker}${keys}`);
+    for (let child of this.children) {
+      child.print(depth + 1);
+    }
   }
 }
 
 class Tree234 {
   root = new Node234();
   constructor() {}
-  split(nodeA: Node234, middleIndex = 0) {
+  split(node: Node234, middleIndex = 0) {
     const nodeB = new Node234();
-    nodeB.parent = nodeA.parent;
-    nodeA.parent.children.push(nodeB);
-    nodeB.keys.push(nodeA.keys[2]);
-    nodeA.parent?.keys.push(nodeA.keys[1]);
-    nodeA.keys = [nodeA.keys[0]];
-  }
-  inject(node: Node234, key: number) {
-    let i = node.keys.length - 1;
-    if (node.isLeaf()) {
-      node.keys[i + 1] = node.keys[i];
-      i--;
+    const midKey = node.keys[1];
+    nodeB.keys.push(node.keys[2]);
+    node.keys.splice(1, 3);
+    const upperHalf = node.children.splice(2, 4);
+    nodeB.children = upperHalf;
+    if (!node.parent) {
+      this.root = new Node234();
+      node.parent = this.root;
+      nodeB.parent = this.root;
+      this.root.children = [node, nodeB];
+      this.root.keys.push(midKey);
     } else {
-      while (i >= 0 && key < node.keys[i]) {
-        i--;
-      }
-      i++;
-      if (node.children[i].is4Node()) {
-        this.splitChild(node, i);
-        if (key > node.keys[i]) {
-          i++;
-        }
-      }
-      this.inject(node.children[i], key);
+      nodeB.parent = node.parent;
+      node.parent.children.push(nodeB);
+      node.parent.keys.push(midKey);
     }
+  }
+  private addKey(node: Node234, key: number) {
+    if (node.keys.length === 3) {
+      this.split(node);
+      return this.addKey(node.parent!, key);
+    }
+    let i = 0;
+    while (key > node.keys[i]) {
+      i++;
+    }
+    if (node.isLeaf()) {
+      const endKeys = node.keys.splice(i, node.keys.length - i);
+      node.keys.push(key);
+      node.keys.concat(endKeys);
+      return;
+    }
+    this.addKey(node.children[i], key);
   }
   insert(key: number) {
-    if (this.root?.is4Node()) {
-      const newRoot = new Node234(); // Create new node to hoist up
-      const oldRoot = this.root; // Ref old node
-      oldRoot.parent = newRoot; // old root descendend of new
-      newRoot.children.push(oldRoot); // and establishing inverse relation
-      this.root = newRoot; // and reassign root
-      this.split(oldRoot); // we still need to split up the old node
-    }
-    this.inject(this.root, key);
+    this.addKey(this.root, key);
   }
   search() {}
   remove() {}
 }
 
 const tree = new Tree234();
-for (let i = 1; i < 10; i++) {
+
+for (let i = 1; i < 100; i++) {
   tree.insert(i);
+  console.log("i", i);
+  tree.root.print();
 }
-console.log(tree.root.print());
