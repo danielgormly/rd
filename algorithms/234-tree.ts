@@ -6,7 +6,6 @@
 // A 4 node: 3 data elements, if internal 4 children
 // All external nodes i.e. leaves are at the same depth
 // Data is kept in sorted order
-// Easy explanation https://www.thecrazyprogrammer.com/2021/04/2-3-4-trees.html
 
 class Node234 {
   keys: number[] = [];
@@ -34,7 +33,7 @@ class Node234 {
   }
 }
 
-class Tree234 {
+export class Tree234 {
   root = new Node234();
   constructor() {}
   split(node: Node234, middleIndex = 0) {
@@ -43,6 +42,7 @@ class Tree234 {
     nodeB.keys.push(node.keys[2]);
     node.keys.splice(1, 3);
     const upperHalf = node.children.splice(2, 4);
+    upperHalf.map((n) => (n.parent = nodeB));
     nodeB.children = upperHalf;
     if (!node.parent) {
       this.root = new Node234();
@@ -65,10 +65,14 @@ class Tree234 {
     while (key > node.keys[i]) {
       i++;
     }
+    if (key === node.keys[i]) {
+      console.warn("Skipping duplicate key", key);
+      return;
+    }
     if (node.isLeaf()) {
       const endKeys = node.keys.splice(i, node.keys.length - i);
       node.keys.push(key);
-      node.keys.concat(endKeys);
+      node.keys.push(...endKeys);
       return;
     }
     this.addKey(node.children[i], key);
@@ -78,12 +82,4 @@ class Tree234 {
   }
   search() {}
   remove() {}
-}
-
-const tree = new Tree234();
-
-for (let i = 1; i < 100; i++) {
-  tree.insert(i);
-  console.log("i", i);
-  tree.root.print();
 }
