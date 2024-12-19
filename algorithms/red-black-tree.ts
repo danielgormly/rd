@@ -1,19 +1,20 @@
 // Red-black tree toy implementation
-// Binary tree = each node only has 2 children max.
-// Self-balancing tree where each node has metadata (0/1) representing red vs black
-// Root & extreme nodes are black
+// A kind of binary tree with several rules:
+// Self-balancing tree where each node is red or black
+// Root & leaves (NIL) are black
 // The children of red nodes are black
-// All external nodes (aka extreme nodes apart from root) have the same BLACK depth
+// All paths from a node to its NIL descendents contain the same number of black nodes.
 
 type Color = "red" | "black";
 
 class RedBlackNode {
-  val: number | null;
+  val: number;
   root: boolean;
   colour: Color;
-  left: Node | null;
-  right: Node | null;
-  constructor(val: number | null, colour: Color, root = false) {
+  parent: RedBlackNode | null;
+  left: RedBlackNode | null;
+  right: RedBlackNode | null;
+  constructor(val: number, colour: Color, root = false) {
     this.val = val;
     this.root = root;
     this.colour = colour;
@@ -23,24 +24,58 @@ class RedBlackNode {
 class RedBlackTree {
   root: RedBlackNode | null = null;
   constructor() {}
-  insert(val: number) {
-    if (!this.root) {
-      this.root = new RedBlackNode(32, "black", true);
-      return;
+  // Black aunt rotate
+  // Red aunt colourflip
+  rebalance(node: RedBlackNode) {
+    if (node.parent && node.parent.parent) {
+      if (node.parent.parent.right === node) {
+        // left uncle
+      } else {
+        // right uncle
+      }
     }
   }
-  search(val: number) {
-    const _search = (value: number, node: RedBlackNode | null) => {
-      if (node === null) return undefined;
-      if (value === node.val) {
-        return node;
+  insert(val: number) {
+    if (!this.root) {
+      this.root = new RedBlackNode(val, "black", true);
+      return;
+    }
+    const _insert = (curNode: RedBlackNode, node: RedBlackNode) => {
+      if (val === curNode.val) {
+        return console.warn("Discarding duplicate node");
       }
-      if (value < node.val) {
+      if (val < curNode.val) {
+        if (!curNode.left) {
+          curNode.left = node;
+          node.parent = curNode;
+          this.rebalance(node);
+        }
       }
-      if (value > node.val) {
+      if (val > curNode.val) {
+        if (!curNode.right) {
+          curNode.right = node;
+          node.parent = curNode;
+          this.rebalance(node);
+        }
       }
     };
-    _search(val, this.root);
+    const newNode = new RedBlackNode(val, "red");
+    _insert(this.root, newNode);
+  }
+  search(val: number) {
+    const _search = (node: RedBlackNode | null) => {
+      if (node === null) return undefined;
+      if (val === node.val) {
+        return node;
+      }
+      if (val < node.val) {
+        return _search(node.left);
+      }
+      if (val > node.val) {
+        return _search(node.right);
+      }
+    };
+    _search(this.root);
   }
   remove(val: number) {}
 }
