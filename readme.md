@@ -1,3 +1,3 @@
 # R&D
 
-Educational monorepo
+Personal education repo from 2024 onwards
