@@ -80,6 +80,19 @@ export class Tree234 {
   insert(key: number) {
     this.addKey(this.root, key);
   }
-  search() {}
+  private findInNode(node: Node234, key: number) {
+    let i = 0;
+    while (key > node.keys[i]) {
+      i++;
+    }
+    if (key === node.keys[i]) {
+      return node;
+    }
+    if (node.isLeaf()) return;
+    return this.findInNode(node.children[i], key);
+  }
+  search(key: number) {
+    return this.findInNode(this.root, key);
+  }
   remove() {}
 }
