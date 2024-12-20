@@ -20,19 +20,104 @@ class RedBlackNode {
   parent: RedBlackNode | null = null;
   left: RedBlackNode | null = null;
   right: RedBlackNode | null = null;
-  constructor(key: number, colour: Color, parent?: RedBlackNode = null) {
+  constructor(key: number, colour: Color, parent: RedBlackNode | null = null) {
     this.key = key;
-    this.red = "red" ? true : false;
+    this.red = colour === "red" ? true : false;
     this.parent = parent;
   }
-  print() {}
+  print(prefix = "", isLeft = true) {
+    console.log(
+      prefix +
+        (!this.parent ? "root:" : isLeft ? "l:" : "r:") +
+        this.key +
+        "(" +
+        (this.red ? "red" : "black") +
+        ")",
+    );
+    this.left && this.left.print(prefix + (isLeft ? "    " : "│   "), true);
+    this.right && this.right.print(prefix + (isLeft ? "    " : "│   "), false);
+  }
 }
 
 class RedBlackTree {
   root: RedBlackNode | null = null;
   constructor() {}
+  rotateLeft(pivot: RedBlackNode) {
+    const newRoot = pivot.right!;
+    pivot.right = newRoot.left;
+    if (newRoot.left) newRoot.left.parent = pivot;
+    newRoot.parent = pivot.parent;
+    if (!pivot.parent) {
+      this.root = newRoot;
+    } else if (pivot === pivot.parent.left) {
+      pivot.parent.left = newRoot;
+    } else {
+      pivot.parent.right = newRoot;
+    }
+    newRoot.left = pivot;
+    pivot.parent = newRoot;
+  }
+  rotateRight(pivot: RedBlackNode) {
+    const newRoot = pivot.left!;
+    pivot.left = newRoot?.right;
+    if (newRoot.right) newRoot.right.parent = pivot;
+    newRoot.parent = pivot.parent;
+    if (!pivot.parent) {
+      this.root = newRoot;
+    } else if (pivot === pivot.parent.right) {
+      pivot.parent.right = newRoot;
+    } else {
+      pivot.parent.left = newRoot;
+    }
+    newRoot.right = pivot;
+    pivot.parent = newRoot;
+  }
   balance(node: RedBlackNode) {
-    // if (node.color = red)
+    while (node.parent && node.parent.red) {
+      if (!node.parent.parent) {
+        // parent is root, no grandparent = no aunt
+        this.root!.red = false;
+        return;
+      }
+      const leftBranch = node === node.parent.left;
+      const leftSubtree = node.parent === node.parent.parent.left;
+      const aunt = leftSubtree
+        ? node.parent.parent.right
+        : node.parent.parent.left;
+      // Recolour op (red aunt)
+      if (aunt && aunt.red) {
+        node.parent.red = false;
+        aunt.red = false;
+        node.parent.parent.red = true;
+        node = node.parent.parent;
+        continue; // Move up the tree
+      } else {
+        // Rotate op (black aunt)
+        if (leftSubtree) {
+          if (!leftBranch) {
+            // lr case
+            node = node.parent;
+            this.rotateLeft(node);
+          }
+          // ll case
+          node.parent!.red = false;
+          node.parent!.parent!.red = true;
+          this.rotateRight(node.parent!.parent!);
+          break;
+        } else {
+          if (leftBranch) {
+            // rl case
+            node = node.parent!;
+            this.rotateRight(node);
+          }
+          // rr case
+          node.parent!.red = false;
+          node.parent!.parent!.red = true;
+          this.rotateLeft(node!.parent!.parent!);
+          break;
+        }
+      }
+    }
   }
   add(node: RedBlackNode, key: number) {
     if (key === node.key) {
@@ -43,6 +128,7 @@ class RedBlackTree {
         return this.add(node.left, key);
       }
       node.left = new RedBlackNode(key, "red", node);
+      this.balance(node.left);
       return;
     }
     if (key > node.key) {
@@ -50,6 +136,7 @@ class RedBlackTree {
         return this.add(node.right, key);
       }
       node.right = new RedBlackNode(key, "red", node);
+      this.balance(node.right);
       return;
     }
   }
@@ -65,25 +152,8 @@ class RedBlackTree {
 }
 
 const tree = new RedBlackTree();
-tree.insert(3);
-tree.insert(4);
-tree.insert(2);
-tree.insert(6);
-tree.insert(7);
-
-function printTree(node, prefix = "", isLeft = true) {
-  if (node === null) return;
-  console.log(
-    prefix +
-      (!node.parent ? "root:" : isLeft ? "l:" : "r:") +
-      node.key +
-      "(" +
-      (node.red ? "red" : "black") +
-      ")",
-  );
-  printTree(node.left, prefix + (isLeft ? "    " : "│   "), true);
-  printTree(node.right, prefix + (isLeft ? "    " : "│   "), false);
-}
-
-printTree(tree.root);
-// console.log(tree.root);
+[10, 8, 12, 9, 7, 6, 5, 14, 53, 3, 6, 2, 99, 65, 43].forEach((n, i) => {
+  tree.insert(n);
+  console.log("Iteration", i);
+  tree.root!.print();
+});
