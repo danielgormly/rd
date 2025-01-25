@@ -23,7 +23,7 @@ Breaking it down:
 - BuiltID[sha1] - unique identifier for this build - debugging and matching debug info
 - not stripped - still contains debugging symbols
 
-Deeper into the ELF with `readelf -h hello`:
+Deeper into the ELF with `readelf -h hello` (displays header section)
 ELF Header:
   Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
   Class:                             ELF64
@@ -44,3 +44,13 @@ ELF Header:
   Size of section headers:           64 (bytes)
   Number of section headers:         30
   Section header string table index: 29
+
+Verifying with `xxd hellow | head -n 1` (hexdump)
+> 00000000: 7f45 4c46 0201 0100 0000 0000 0000 0000  .ELF............
+
+objdump - display information from object files / attempts to dissassemble machine code into organised assembly code
+
+`readelf -d hello` (displays dynamic section)
+>0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+
+so .so = shared object
