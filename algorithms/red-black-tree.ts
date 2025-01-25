@@ -8,13 +8,10 @@
 // If aunt is red: colour-flip
 // After rotation three nodes end up as black -> red/red
 // After colour-flip: parent ends up as red -> black/blacks
-//
-// Rotations:
-//
 
 type Color = "red" | "black";
 
-class RedBlackNode {
+export class RedBlackNode {
   key: number;
   red: boolean;
   parent: RedBlackNode | null = null;
@@ -24,6 +21,9 @@ class RedBlackNode {
     this.key = key;
     this.red = colour === "red" ? true : false;
     this.parent = parent;
+  }
+  isLeaf() {
+    return !this.left && !this.right;
   }
   print(prefix = "", isLeft = true) {
     console.log(
@@ -39,7 +39,7 @@ class RedBlackNode {
   }
 }
 
-class RedBlackTree {
+export class RedBlackTree {
   root: RedBlackNode | null = null;
   constructor() {}
   rotateLeft(pivot: RedBlackNode) {
@@ -118,8 +118,11 @@ class RedBlackTree {
         }
       }
     }
+    if (this.root) {
+      this.root!.red = false;
+    }
   }
-  add(node: RedBlackNode, key: number) {
+  private add(node: RedBlackNode, key: number): void {
     if (key === node.key) {
       console.warn("skipping duplicate key", key);
     }
@@ -147,13 +150,164 @@ class RedBlackTree {
     }
     this.add(this.root, key);
   }
-  search(key: number) {}
-  remove(key: number) {}
-}
+  find(key: number) {
+    let cur = this.root;
+    while (cur && cur.key != key) {
+      if (key < cur.key) {
+        cur = cur.left;
+      } else {
+        cur = cur.right;
+      }
+    }
+    return cur;
+  }
+  // Find smallest node in right side of tree
+  getSuccessor(node: RedBlackNode) {
+    let cur = node.right!;
+    while (cur.left) {
+      cur = cur.left;
+    }
+    return cur;
+  }
+  fixDelete(x: RedBlackNode | null) {
+    while (x !== this.root && (!x || !x.red)) {
+      if (!x?.parent) break;
 
-const tree = new RedBlackTree();
-[10, 8, 12, 9, 7, 6, 5, 14, 53, 3, 6, 2, 99, 65, 43].forEach((n, i) => {
-  tree.insert(n);
-  console.log("Iteration", i);
-  tree.root!.print();
-});
+      if (x === x.parent.left) {
+        let w = x.parent.right;
+        if (!w) break;
+
+        if (w.red) {
+          w.red = false;
+          x.parent.red = true;
+          this.rotateLeft(x.parent);
+          w = x.parent.right;
+        }
+
+        if (w && (!w.left || !w.left.red) && (!w.right || !w.right.red)) {
+          w.red = true;
+          x = x.parent;
+        } else {
+          if (w && (!w.right || !w.right.red)) {
+            if (w.left) w.left.red = false;
+            w.red = true;
+            this.rotateRight(w);
+            w = x.parent.right;
+          }
+
+          if (w) {
+            w.red = x.parent.red;
+            x.parent.red = false;
+            if (w.right) w.right.red = false;
+            this.rotateLeft(x.parent);
+          }
+
+          x = this.root;
+        }
+      } else {
+        let w = x.parent.left;
+        if (!w) break;
+
+        if (w.red) {
+          w.red = false;
+          x.parent.red = true;
+          this.rotateRight(x.parent);
+          w = x.parent.left;
+        }
+
+        if (w && (!w.right || !w.right.red) && (!w.left || !w.left.red)) {
+          w.red = true;
+          x = x.parent;
+        } else {
+          if (w && (!w.left || !w.left.red)) {
+            if (w.right) w.right.red = false;
+            w.red = true;
+            this.rotateLeft(w);
+            w = x.parent.left;
+          }
+
+          if (w) {
+            w.red = x.parent.red;
+            x.parent.red = false;
+            if (w.left) w.left.red = false;
+            this.rotateRight(x.parent);
+          }
+
+          x = this.root;
+        }
+      }
+    }
+    if (x) x.red = false;
+  }
+  // replace node a with node b, effectively discarding node a
+  transplant(a: RedBlackNode, b: RedBlackNode | null) {
+    if (!a.parent) {
+      this.root = b;
+    } else if (a === a.parent.left) {
+      a.parent.left = b;
+    } else {
+      a.parent.right = b;
+    }
+    if (b) {
+      b.parent = a.parent;
+    }
+  }
+  remove(key: number) {
+    let z = this.find(key); // find node
+    if (!z) return; // Nothing to remove
+
+    let y = z; // node to delete
+    let yInitialRed = y.red; // track colour of node to delete
+    let x: RedBlackNode | null = null; // node to replace
+
+    if (!z.left) {
+      // transplant: is leaf or no left node
+      x = z.right; // could be null
+      this.transplant(z, z.right); // replace node to delete with node.right
+    } else if (!z.right) {
+      // transplant: has left but no right child
+      x = z.left; // is not null
+      this.transplant(z, z.left);
+    } else {
+      // transplant:  2 children
+      y = this.getSuccessor(z); // get minimum rhs val
+      yInitialRed = y.red;
+      x = y.right;
+
+      if (y.parent === z) {
+        if (x) x.parent = y;
+      } else {
+        this.transplant(y, y.right);
+        y.right = z.right;
+        if (y.right) y.right.parent = y;
+      }
+      this.transplant(z, y);
+      y.left = z.left;
+      y.left.parent = y;
+      y.red = z.red;
+    }
+    // TODO: Simplify
+    // TODO: root red checks
+    // If og node is red, replacement is nil or red (black node height unchanged within path, red-red not violated)
+    if (yInitialRed && (x === null || x.red)) {
+      return; // Done
+    }
+    // if og node is black & replacement is red, colour replacement black (black node height changed, ...?)
+    if (yInitialRed === false && x?.red) {
+      x.red = false;
+      return;
+    }
+    // height changed but across all nodes, red rule not violated
+    if (this.root === x && yInitialRed === false && x && !x.red) {
+      return;
+    }
+    // last cases:
+    if (!yInitialRed && (!x || !x.red)) {
+      if (x) x.red = true;
+    }
+    this.fixDelete(x);
+    if (this.root) {
+      this.root.red = false;
+    }
+  }
+}
