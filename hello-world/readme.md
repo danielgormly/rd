@@ -53,4 +53,4 @@ objdump - display information from object files / attempts to dissassemble machi
 `readelf -d hello` (displays dynamic section)
 >0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
 
-so .so = shared object
+so .so = Shared Objects (equivalent to .dll on Windows)
