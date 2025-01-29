@@ -40,6 +40,7 @@ int main(int argc, char *argv[]) {
     }
     struct addrinfo *cur;
     char ipstr[INET6_ADDRSTRLEN];
+    int s; // socket
     for (cur = res; cur != NULL; cur = cur->ai_next) {
         void *addr;
         char *ipver;
@@ -53,8 +54,31 @@ int main(int argc, char *argv[]) {
             ipver = "IPv6";
         }
         inet_ntop(cur->ai_family, addr, ipstr, sizeof ipstr);
-        printf("%s: %s\n", ipver, ipstr);
+        printf("Attempting to create socket %s: %s\n", ipver, ipstr);
+        s = socket(cur->ai_family, cur->ai_socktype, cur->ai_protocol);
+        if (s == -1) {
+            printf("Socket creation failed\n");
+            continue;
+        } else {
+            printf("Socket created - %i\n", s);
+            break;
+        }
     }
+    // s
+    int e = connect(s, cur->ai_addr, cur->ai_addrlen);
+    if (e != 0) {
+        printf("Connection failed!");
+        exit(e);
+    }
+    char *req = "GET / HTTP/1.1\r\n"
+    "Host: google.com\r\n"
+    "Connection: close\r\n"
+    "\r\n";
+    char *response = (char *)malloc(10240);
+    send(s, req, strlen(req), 0);
+    recv(s, response, strlen(req), 0);
+    printf("%s", response);
+    memset(response, 0, 10240);
     freeaddrinfo(res);
     return i;
 }
