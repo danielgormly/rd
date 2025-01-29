@@ -53,3 +53,21 @@ ntohs() 	network to host short
 ntohl() 	network to host long
 
 ## 3.3 structs
+
+A `sockaddr` struct only has 14 bytes of protocol address, IPV6, excluding port etc, has 16 bytes itself (128-bit / 8 = 16), and stuffing IPV4 inside 14 chars is painful, so there's a lot of intermediate structures defined that cast themselves to sockaddr.sa_data[14].
+```c
+struct sockaddr {
+    unsigned short    sa_family;    // address family, AF_xxx
+    char              sa_data[14];  // 14 bytes of protocol address
+};
+```
+
+Skipping those we have the much easier:
+
+```c
+struct sockaddr_in sa; // IPv4
+struct sockaddr_in6 sa6; // IPv6
+
+inet_pton(AF_INET, "10.12.110.57", &(sa.sin_addr)); // IPv4
+inet_pton(AF_INET6, "2001:db8:63b3:1::3490", &(sa6.sin6_addr)); // IPv6
+```
