@@ -12,7 +12,7 @@ const scenes = new Map<string, Scene>([
     "triangle",
     {
       title: "Triangle",
-      description: "Rendering a triangle",
+      description: `Rendering a triangle (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
       func: triangle,
     },
   ],

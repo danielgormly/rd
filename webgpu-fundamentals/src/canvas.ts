@@ -19,7 +19,7 @@ function debug(el: HTMLElement, ctx?: GPUCanvasContext) {
 
 async function wgpu(
   canvas: HTMLCanvasElement,
-): Promise<[GPUCanvasContext, GPUDevice]> {
+): Promise<[GPUCanvasContext, GPUDevice, GPUTextureFormat]> {
   const adapter = await navigator.gpu?.requestAdapter();
   const device = await adapter?.requestDevice();
   if (!device) {
@@ -32,17 +32,22 @@ async function wgpu(
   const format = navigator.gpu.getPreferredCanvasFormat();
   ctx.configure({
     device,
-    format: format,
+    format,
   });
-  return [ctx, device];
+  return [ctx, device, format];
 }
 
 export async function initWGPUCanvas(
   el: HTMLElement,
   showDebugEl?: boolean,
-): Promise<[GPUCanvasContext, GPUDevice]> {
+): Promise<[GPUCanvasContext, GPUDevice, GPUTextureFormat]> {
   const canvas = setupCanvas(el);
-  const [ctx, device] = await wgpu(canvas);
-  if (showDebugEl) debug(el, ctx);
-  return [ctx, device];
+  try {
+    const [ctx, device, format] = await wgpu(canvas);
+    if (showDebugEl) debug(el, ctx);
+    return [ctx, device, format];
+  } catch (err) {
+    debug(el);
+  }
+  throw new Error("failed");
 }
