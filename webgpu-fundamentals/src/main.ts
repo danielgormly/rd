@@ -1,4 +1,5 @@
-import { triangle } from "./xps/01-triangle";
+import { triangle } from "./xps/00-triangle";
+import { basicCompute } from "./xps/01-compute";
 import "./style.css";
 
 interface Scene {
@@ -14,6 +15,14 @@ const scenes = new Map<string, Scene>([
       title: "Triangle",
       description: `Rendering a triangle (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
       func: triangle,
+    },
+  ],
+  [
+    "compute",
+    {
+      title: "Basic Compute",
+      description: `Running simple computations (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html#a-run-computations-on-the-gpu" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
+      func: basicCompute,
     },
   ],
 ]);
@@ -44,6 +53,7 @@ scenes.forEach((exp, key) => {
   links.push(
     `<li><a href="#${key}">${i.toString().padStart(2, "0")} ${exp.title}</a>: ${exp.description}</li>`,
   );
+  i++;
 });
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `

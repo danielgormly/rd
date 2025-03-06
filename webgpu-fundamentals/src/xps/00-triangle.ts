@@ -20,7 +20,7 @@ const hardcodedTriangle = `
 
 // fragment shader returning the colour red @ all points
 @fragment fn fs() -> @location(0) vec4f {
-    return vec4f(0.74, 0.45, 0.45, 1.0);
+    return vec4f(0.74, 0.45, 0.45, 0.1);
 }
 `;
 
