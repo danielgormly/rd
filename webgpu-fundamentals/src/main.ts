@@ -34,8 +34,11 @@ window.addEventListener("hashchange", (event) => {
 });
 
 const links: string[] = [];
+let i = 0;
 scenes.forEach((exp, key) => {
-  links.push(`<li><a href="#${key}">${exp.title}</a>: ${exp.description}</li>`);
+  links.push(
+    `<li><a href="#${key}">${i.toString().padStart(2, "0")} ${exp.title}</a>: ${exp.description}</li>`,
+  );
 });
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `

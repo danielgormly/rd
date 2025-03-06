@@ -1,5 +1,7 @@
+import { setupCanvas } from "./canvas";
+
 export function triangle(el: HTMLElement) {
-  console.log("triangle", el);
+  setupCanvas(el);
 }
 
 export const Triangle = {
