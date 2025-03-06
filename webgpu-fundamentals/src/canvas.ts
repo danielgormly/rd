@@ -6,7 +6,7 @@ function setupCanvas(el: HTMLElement) {
 }
 
 function debug(el: HTMLElement, ctx?: GPUCanvasContext) {
-  const debug = document.createElement("div");
+  const debug = document.getElementById("debug");
   debug.className = "debug";
   if (!ctx) {
     debug.innerHTML = `WebGPU not supported`;
@@ -14,7 +14,6 @@ function debug(el: HTMLElement, ctx?: GPUCanvasContext) {
     const config = ctx.getConfiguration();
     debug.innerHTML = `canvas_resolution:${ctx.canvas.width}x${ctx.canvas.height};adapter:${config?.device.adapterInfo.vendor};arch:${config?.device.adapterInfo.architecture};color_space:${config?.colorSpace};format:${config?.format};`;
   }
-  el.appendChild(debug);
 }
 
 async function wgpu(

@@ -60,6 +60,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
   <section id="board">
   </section>
+  <div id="debug"></div>
   <ul>
     ${links.join("\n")}
   </ul>
