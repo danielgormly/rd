@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@webgpu/types':
+        specifier: ^0.1.55
+        version: 0.1.55
       typescript:
         specifier: ~5.6.2
         version: 5.6.3
@@ -259,6 +262,9 @@ packages:
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
 
+  '@webgpu/types@0.1.55':
+    resolution: {integrity: sha512-p97I8XEC1h04esklFqyIH+UhFrUcj8/1/vBWgc6lAK4jMJc+KbhUy8D4dquHYztFj6pHLqGcp/P1xvBBF4r3DA==}
+
   esbuild@0.24.0:
     resolution: {integrity: sha512-FuLPevChGDshgSicjisSooU0cemp/sGXR841D5LHMB7mTVOmsEHcAxaH3irL53+8YDIeVNQEySh4DaYU/iuPqQ==}
     engines: {node: '>=18'}
@@ -467,6 +473,8 @@ snapshots:
     optional: true
 
   '@types/estree@1.0.6': {}
+
+  '@webgpu/types@0.1.55': {}
 
   esbuild@0.24.0:
     optionalDependencies:

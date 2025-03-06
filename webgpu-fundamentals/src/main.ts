@@ -1,4 +1,4 @@
-import { triangle } from "./01-triangle";
+import { triangle } from "./xps/01-triangle";
 import "./style.css";
 
 interface Scene {
