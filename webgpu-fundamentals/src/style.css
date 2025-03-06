@@ -17,10 +17,20 @@ body {
     line-height: 1.5em;
 }
 
+h1 {
+    font-family: Adhesion;
+    text-transform: lowercase;
+    margin-bottom: 1em;
+}
+
+ul {
+    margin-top: 1em;
+}
+
 ul,
 li {
-    margin: 0;
-    padding: 0;
+    margin-left: 0;
+    padding-left: 0;
 }
 
 li {
@@ -38,9 +48,11 @@ a:hover {
 
 #board {
     width: 100%;
-    min-height: 300px;
 }
 
 canvas {
-    background: navy;
+    background: #292988;
+    width: 800px;
+    height: 400px;
+    border-radius: 4px;
 }

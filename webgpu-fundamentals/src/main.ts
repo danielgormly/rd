@@ -21,7 +21,12 @@ const scenes = new Map<string, Scene>([
 function route(hash: string) {
   const board = document.getElementById("board");
   if (!board) return;
-  if (!hash) {
+  if (hash) {
+    const strippedHash = hash.slice(1);
+    const exp = scenes.get(strippedHash);
+    if (!exp) return;
+    exp.func(board);
+  } else {
     const exp = scenes.get("triangle");
     if (!exp) return;
     exp.func(board);
@@ -43,7 +48,6 @@ scenes.forEach((exp, key) => {
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
-  <h1>WebGPU Experiments</h1>
   <section id="board">
   </section>
   <ul>
