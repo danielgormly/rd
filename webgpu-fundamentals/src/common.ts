@@ -79,11 +79,11 @@ export function resizeCanvas(
     const width = entry.contentBoxSize[0].inlineSize;
     const height = entry.contentBoxSize[0].blockSize;
     canvas.width = Math.max(
-      1,
+      1, // Ensures we don't hit 0 & cause problems
       Math.min(width, device.limits.maxTextureDimension2D),
     );
     canvas.height = Math.max(
-      1,
+      1, // Ensures we don't hit 0 & cause problems
       Math.min(height, device.limits.maxTextureDimension2D),
     );
   }
