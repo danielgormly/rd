@@ -1,4 +1,4 @@
-import { initWGPUCanvas } from "../common";
+import { debug, initWGPUCanvas, resizeCanvas } from "../common";
 
 // Notes:
 // A vertex shader & a fragment shader
@@ -69,6 +69,7 @@ export async function triangle(el: HTMLElement) {
 
     const commandBuffer = encoder.finish();
     device.queue.submit([commandBuffer]);
+    debug(ctx);
   }
-  render();
+  resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
 }
