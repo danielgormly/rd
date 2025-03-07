@@ -39,7 +39,10 @@ export async function basicCompute(el: HTMLElement) {
       module,
     },
   });
-  const input = new Float32Array([1, 3, 5]);
+  const input = new Float32Array(10);
+  for (let i = 0; i < input.byteLength; i++) {
+    input[i] = Math.random() * 10;
+  }
   const workBuffer = device?.createBuffer({
     label: "work buffer",
     size: input.byteLength, // 12 bytes (4*3)
@@ -52,6 +55,7 @@ export async function basicCompute(el: HTMLElement) {
     debug("Workbuffer failed to be created");
     return;
   }
+  performance.mark("pre-command");
   // Write the data to the device
   device.queue.writeBuffer(workBuffer, 0, input);
   // Create out buffer on the GPU
@@ -80,7 +84,6 @@ export async function basicCompute(el: HTMLElement) {
   encoder.copyBufferToBuffer(workBuffer, 0, resultBuffer, 0, resultBuffer.size);
   const commandBuffer = encoder.finish();
   // Start!
-  performance.mark("pre-command");
   device.queue.submit([commandBuffer]);
   // Read the results
   await resultBuffer.mapAsync(GPUMapMode.READ);
@@ -89,6 +92,6 @@ export async function basicCompute(el: HTMLElement) {
   const measure = performance.measure("duration", "pre-command", "read-result");
   const board = document.getElementsByClassName("text-board")[0];
   if (!board) throw new Error();
-  board.innerHTML = `Doubling numbers via webgpu:<br>input: ${input}<br>result: ${result}<br>Round trip: ${measure.duration.toFixed(2)}ms`;
+  board.innerHTML = `Doubling 10xfp32 via webgpu:<br>input: ${input}<br>result: ${result}<br>Round trip: ${measure.duration.toFixed(2)}ms`;
   resultBuffer.unmap();
 }
