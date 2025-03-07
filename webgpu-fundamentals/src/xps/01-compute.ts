@@ -17,7 +17,7 @@ const code = `
 
 export async function basicCompute(el: HTMLElement) {
   el.innerHTML =
-    "<div class='text-board'>Nothing to see here. This is a compute only shader.</div>";
+    "<div class='text-board'>Attempting to run compute shader</div>";
   const device = await getDevice();
   if (!device) {
     debug(`Failed to get WGPU device`);
@@ -61,4 +61,34 @@ export async function basicCompute(el: HTMLElement) {
     usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
   });
   // bindgroup to bind buffer to shader
+  const bindGroup = device.createBindGroup({
+    label: "bindGroup for work buffer",
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: workBuffer } }],
+  });
+  // encode & run
+  const encoder = device.createCommandEncoder({
+    label: "doubling encoder",
+  });
+  const pass = encoder.beginComputePass({
+    label: "doubling compute pass",
+  });
+  pass.setPipeline(pipeline);
+  pass.setBindGroup(0, bindGroup);
+  pass.dispatchWorkgroups(input.length);
+  pass.end();
+  encoder.copyBufferToBuffer(workBuffer, 0, resultBuffer, 0, resultBuffer.size);
+  const commandBuffer = encoder.finish();
+  // Start!
+  performance.mark("pre-command");
+  device.queue.submit([commandBuffer]);
+  // Read the results
+  await resultBuffer.mapAsync(GPUMapMode.READ);
+  const result = new Float32Array(resultBuffer.getMappedRange());
+  performance.mark("read-result");
+  const measure = performance.measure("duration", "pre-command", "read-result");
+  const board = document.getElementsByClassName("text-board")[0];
+  if (!board) throw new Error();
+  board.innerHTML = `Doubling numbers via webgpu:<br>input: ${input}<br>result: ${result}<br>Round trip: ${measure.duration.toFixed(2)}ms`;
+  resultBuffer.unmap();
 }
