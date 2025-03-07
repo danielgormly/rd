@@ -5,9 +5,16 @@ function setupCanvas(el: HTMLElement) {
   return canvas;
 }
 
-function debug(el: HTMLElement, ctx?: GPUCanvasContext) {
+export function debug(ctx?: GPUCanvasContext | string) {
   const debug = document.getElementById("debug");
-  debug.className = "debug";
+  if (!debug) {
+    console.warn("debug target not found");
+    return;
+  }
+  if (typeof ctx === "string") {
+    debug.innerHTML = ctx;
+    return;
+  }
   if (!ctx) {
     debug.innerHTML = `WebGPU not supported`;
   } else {
@@ -43,10 +50,21 @@ export async function initWGPUCanvas(
   const canvas = setupCanvas(el);
   try {
     const [ctx, device, format] = await wgpu(canvas);
-    if (showDebugEl) debug(el, ctx);
+    if (showDebugEl) debug(ctx);
     return [ctx, device, format];
   } catch (err) {
-    debug(el);
+    debug();
   }
   throw new Error("failed");
+}
+
+// TODO: Combine
+export async function getDevice() {
+  const adapter = await navigator.gpu?.requestAdapter();
+  const device = await adapter?.requestDevice();
+  if (!device) {
+    debug("need a browser that supports WebGPU");
+    return;
+  }
+  return device;
 }

@@ -1,4 +1,4 @@
-import { initWGPUCanvas } from "../canvas";
+import { initWGPUCanvas } from "../common";
 
 // Notes:
 // A vertex shader & a fragment shader
