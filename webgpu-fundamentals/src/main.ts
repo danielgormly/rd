@@ -1,6 +1,7 @@
 import { triangle } from "./xps/00-triangle";
 import { basicCompute } from "./xps/01-compute";
 import "./style.css";
+import { rainbowTriangle } from "./xps/02-rainbow-triangle";
 
 interface Scene {
   title: string;
@@ -23,6 +24,14 @@ const scenes = new Map<string, Scene>([
       title: "Basic Compute",
       description: `Running simple computations (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html#a-run-computations-on-the-gpu" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
       func: basicCompute,
+    },
+  ],
+  [
+    "tri",
+    {
+      title: "Rainbow Triangle",
+      description: `Using an interstage variable to interpolate colours across a triangle (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-inter-stage-variables.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
+      func: rainbowTriangle,
     },
   ],
 ]);
