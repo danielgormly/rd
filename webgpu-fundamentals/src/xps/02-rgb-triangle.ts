@@ -1,7 +1,13 @@
 import { Pane } from "tweakpane";
 import { debug, initWGPUCanvas, resizeCanvas } from "../common";
 
-const rainbowTriangleCode = `
+// re. @builtin(position) in vertex shader:
+// not an inter-stage variable, the coordinate provided for output that the GPU uses to draw triangles/lines/points
+// --- A clear line of demarcation ---
+// This is separate to @builtin(position) in fragment shader
+// an input, the pixel coordinate of the pixel that the fragment shader is currently being asked to compute a colour or value for
+// Values provided to the center of the fragment shaders are CENTER coordinates of pixels, not pixel coordinates (edge coordinates)
+const rgbTriangleCode = `
 struct OurVertexShaderOutput {
   @builtin(position) position: vec4f,
   @location(0) color: vec4f,
@@ -32,15 +38,15 @@ struct OurVertexShaderOutput {
 }
 `;
 
-export async function rainbowTriangle(el: HTMLElement) {
+export async function rgbTriangle(el: HTMLElement) {
   const pane = new Pane();
   const [ctx, device, format] = await initWGPUCanvas(el, true);
   const module = device.createShaderModule({
-    label: "hardcoded rainbow triangle shader",
-    code: rainbowTriangleCode,
+    label: "hardcoded rgb triangle shader",
+    code: rgbTriangleCode,
   });
   const pipeline = device.createRenderPipeline({
-    label: "hardcoded rainbow triangle pipeline",
+    label: "hardcoded rgb triangle pipeline",
     layout: "auto",
     vertex: {
       // entryPoint: 'vs', (redundant as there's only one!)
@@ -81,8 +87,5 @@ export async function rainbowTriangle(el: HTMLElement) {
     debug(ctx);
   }
   resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
-  return () => {
-    console.log("deleting!");
-    pane.dispose();
-  };
+  return () => pane.dispose();
 }

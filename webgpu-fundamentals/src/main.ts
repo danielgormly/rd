@@ -1,7 +1,8 @@
 import { triangle } from "./xps/00-triangle";
 import { basicCompute } from "./xps/01-compute";
 import "./style.css";
-import { rainbowTriangle } from "./xps/02-rainbow-triangle";
+import { rgbTriangle } from "./xps/02-rgb-triangle";
+import { checkerboardTriangle } from "./xps/03-checkerboard";
 
 interface Scene {
   title: string;
@@ -27,11 +28,19 @@ const scenes = new Map<string, Scene>([
     },
   ],
   [
-    "tri",
+    "rgb-triangle",
     {
-      title: "Rainbow Triangle",
+      title: "RGB Triangle",
       description: `Using an interstage variable to interpolate colours across a triangle (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-inter-stage-variables.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
-      func: rainbowTriangle,
+      func: rgbTriangle,
+    },
+  ],
+  [
+    "checkerboard-triangle",
+    {
+      title: "Checkerboard Triangle",
+      description: `Checkerboard defined with reference to pixel values - so doesn't scale with the screen! (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-inter-stage-variables.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
+      func: checkerboardTriangle,
     },
   ],
 ]);
