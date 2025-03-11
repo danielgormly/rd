@@ -6,7 +6,7 @@ import { rainbowTriangle } from "./xps/02-rainbow-triangle";
 interface Scene {
   title: string;
   description: string;
-  func: (el: HTMLElement) => void;
+  func: (el: HTMLElement) => Promise<void> | Promise<() => void>;
 }
 
 const scenes = new Map<string, Scene>([
@@ -36,19 +36,18 @@ const scenes = new Map<string, Scene>([
   ],
 ]);
 
-function route(hash: string) {
+let destroyFuncs: (() => void)[] = [];
+
+async function route(hash: string) {
   const board = document.getElementById("board");
   if (!board) return;
-  if (hash) {
-    const strippedHash = hash.slice(1);
-    const exp = scenes.get(strippedHash);
-    if (!exp) return;
-    exp.func(board);
-  } else {
-    const exp = scenes.get("triangle");
-    if (!exp) return;
-    exp.func(board);
-  }
+  const destroy = destroyFuncs.shift();
+  if (destroy) destroy();
+  const id = hash ? hash.slice(1) : "triangle";
+  const exp = scenes.get(id);
+  if (!exp) return;
+  const destroyFunc = await exp.func(board);
+  if (destroyFunc) destroyFuncs.push(destroyFunc);
 }
 
 window.addEventListener("hashchange", (event) => {

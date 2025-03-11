@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      tweakpane:
+        specifier: ^4.0.5
+        version: 4.0.5
     devDependencies:
       '@webgpu/types':
         specifier: ^0.1.55
@@ -296,6 +300,9 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  tweakpane@4.0.5:
+    resolution: {integrity: sha512-rxEXdSI+ArlG1RyO6FghC4ZUX8JkEfz8F3v1JuteXSV0pEtHJzyo07fcDG+NsJfN5L39kSbCYbB9cBGHyuI/tQ==}
+
   typescript@5.6.3:
     resolution: {integrity: sha512-hjcS1mhfuyi4WW8IWtjP7brDrG2cuDZukyrYrSauoXGNgx0S7zceP07adYkJycEr56BOUTNPzbInooiN3fn1qw==}
     engines: {node: '>=14.17'}
@@ -542,6 +549,8 @@ snapshots:
       fsevents: 2.3.3
 
   source-map-js@1.2.1: {}
+
+  tweakpane@4.0.5: {}
 
   typescript@5.6.3: {}
 

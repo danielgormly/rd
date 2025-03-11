@@ -1,3 +1,4 @@
+import { Pane } from "tweakpane";
 import { debug, initWGPUCanvas, resizeCanvas } from "../common";
 
 const rainbowTriangleCode = `
@@ -32,6 +33,7 @@ struct OurVertexShaderOutput {
 `;
 
 export async function rainbowTriangle(el: HTMLElement) {
+  const pane = new Pane();
   const [ctx, device, format] = await initWGPUCanvas(el, true);
   const module = device.createShaderModule({
     label: "hardcoded rainbow triangle shader",
@@ -79,4 +81,8 @@ export async function rainbowTriangle(el: HTMLElement) {
     debug(ctx);
   }
   resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
+  return () => {
+    console.log("deleting!");
+    pane.dispose();
+  };
 }
