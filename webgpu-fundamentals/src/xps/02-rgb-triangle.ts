@@ -1,5 +1,6 @@
 import { Pane } from "tweakpane";
 import { debug, initWGPUCanvas, resizeCanvas } from "../common";
+import { Scene } from "../main";
 
 // re. @builtin(position) in vertex shader:
 // not an inter-stage variable, the coordinate provided for output that the GPU uses to draw triangles/lines/points
@@ -89,3 +90,9 @@ export async function rgbTriangle(el: HTMLElement) {
   resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
   return () => pane.dispose();
 }
+
+export const rgbTriScene: Scene = {
+  title: "RGB Triangle",
+  description: `Using an interstage variable to interpolate colours across a triangle (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-inter-stage-variables.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
+  func: rgbTriangle,
+};

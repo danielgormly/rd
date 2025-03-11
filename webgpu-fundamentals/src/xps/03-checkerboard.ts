@@ -1,5 +1,6 @@
 import { Pane } from "tweakpane";
 import { debug, initWGPUCanvas, resizeCanvas } from "../common";
+import { Scene } from "../main";
 
 const vsCode = `
 struct OurVertexShaderOutput {
@@ -88,3 +89,9 @@ export async function checkerboardTriangle(el: HTMLElement) {
   resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
   return () => pane.dispose();
 }
+
+export const checkerboardTriScene: Scene = {
+  title: "Checkerboard Triangle",
+  description: `Checkerboard defined with reference to pixel values - so doesn't scale with the screen! (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-inter-stage-variables.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
+  func: checkerboardTriangle,
+};

@@ -1,46 +1,49 @@
-import { Scene } from "../main";
+import { Pane } from "tweakpane";
 import { debug, initWGPUCanvas, resizeCanvas } from "../common";
+import { Scene } from "../main";
 
-// Notes:
-// A vertex shader & a fragment shader
-// Its argument vertex_index is a builtin, returning a 32-bit unsigned int
-// returns a vec4f (object with 4x floating point vecs) assigned to the "position" builtin
-// Positions are returned in clipspace (-1<x<1, -1<y<1)
-const hardcodedTriangle = `
-// vertex shader
+const createShader = (device: GPUDevice) =>
+  device.createShaderModule({
+    label: "manytriangles shaders",
+    code: `
+struct OurStruct {
+  color: vec4f,
+  scale: vec2f,
+  offset: vec2f,
+};
+
+@group(0) @binding(0) var<uniform> ourStruct: OurStruct;
+
 @vertex fn vs(
   @builtin(vertex_index) vertexIndex : u32
 ) -> @builtin(position) vec4f {
   let pos = array(
-    vec2f(0.0, 0.25), // top center
-    vec2f(-0.125, -0.25), // bottom left
-    vec2f(0.125, -0.25), // bottom right
+    vec2f(0.0, 0.5), // top center
+    vec2f(-0.5, -0.5), // bottom left
+    vec2f(0.5, -0.5), // bottom right
   );
-  return vec4f(pos[vertexIndex], 0.0, 1.0);
+  return vec4f(
+    pos[vertexIndex] * ourStruct.scale + ourStruct.offset, 0.0, 1.0);
 }
 
-// fragment shader returning the colour red @ all points
 @fragment fn fs() -> @location(0) vec4f {
-    return vec4f(0.74, 0.45, 0.45, 0.1);
+  return ourStruct.color;
 }
-`;
-
-export async function triangle(el: HTMLElement) {
-  const [ctx, device, format] = await initWGPUCanvas(el, true);
-  const module = device.createShaderModule({
-    label: "hardcoded red triangle shader",
-    code: hardcodedTriangle,
+`,
   });
+
+export async function manyTriangles(el: HTMLElement) {
+  const pane = new Pane();
+  const [ctx, device, format] = await initWGPUCanvas(el, true);
+  const shader = createShader(device);
   const pipeline = device.createRenderPipeline({
-    label: "hardcoded red triangle pipeline",
+    label: "hardcoded checkerboard triangle pipeline",
     layout: "auto",
     vertex: {
-      // entryPoint: 'vs', (redundant as there's only one!)
-      module,
+      module: shader,
     },
     fragment: {
-      // entryPoint: 'fs', (redundant as there's only one!)
-      module,
+      module: shader,
       targets: [{ format }], // pos 0 aligns with fragment shader output (location 0) ?
     },
   });
@@ -73,10 +76,11 @@ export async function triangle(el: HTMLElement) {
     debug(ctx);
   }
   resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
+  return () => pane.dispose();
 }
 
-export const triangleScene: Scene = {
-  title: "Triangle",
-  description: `Rendering a triangle (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
-  func: triangle,
+export const manyTriScene: Scene = {
+  title: "Many Triangles",
+  description: `Rendering many triangles using a uniform var (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
+  func: manyTriangles,
 };

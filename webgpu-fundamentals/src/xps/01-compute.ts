@@ -1,4 +1,5 @@
 import { getDevice, debug } from "../common";
+import { Scene } from "../main";
 
 const code = `
   // Creating a variable called data of type storage, readable and writeable
@@ -95,3 +96,9 @@ export async function basicCompute(el: HTMLElement) {
   board.innerHTML = `Doubling 10xfp32 via webgpu:<br>input: ${input}<br>result: ${result}<br>Round trip: ${measure.duration.toFixed(2)}ms`;
   resultBuffer.unmap();
 }
+
+export const computeScene: Scene = {
+  title: "Basic Compute",
+  description: `Running simple computations (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html#a-run-computations-on-the-gpu" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
+  func: basicCompute,
+};

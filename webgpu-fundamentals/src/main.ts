@@ -1,48 +1,22 @@
-import { triangle } from "./xps/00-triangle";
-import { basicCompute } from "./xps/01-compute";
 import "./style.css";
-import { rgbTriangle } from "./xps/02-rgb-triangle";
-import { checkerboardTriangle } from "./xps/03-checkerboard";
+import { triangleScene } from "./xps/00-triangle";
+import { computeScene } from "./xps/01-compute";
+import { rgbTriScene } from "./xps/02-rgb-triangle";
+import { checkerboardTriScene } from "./xps/03-checkerboard";
+import { manyTriScene } from "./xps/04-many-triangles";
 
-interface Scene {
+export interface Scene {
   title: string;
   description: string;
   func: (el: HTMLElement) => Promise<void> | Promise<() => void>;
 }
 
 const scenes = new Map<string, Scene>([
-  [
-    "triangle",
-    {
-      title: "Triangle",
-      description: `Rendering a triangle (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
-      func: triangle,
-    },
-  ],
-  [
-    "compute",
-    {
-      title: "Basic Compute",
-      description: `Running simple computations (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html#a-run-computations-on-the-gpu" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
-      func: basicCompute,
-    },
-  ],
-  [
-    "rgb-triangle",
-    {
-      title: "RGB Triangle",
-      description: `Using an interstage variable to interpolate colours across a triangle (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-inter-stage-variables.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
-      func: rgbTriangle,
-    },
-  ],
-  [
-    "checkerboard-triangle",
-    {
-      title: "Checkerboard Triangle",
-      description: `Checkerboard defined with reference to pixel values - so doesn't scale with the screen! (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-inter-stage-variables.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
-      func: checkerboardTriangle,
-    },
-  ],
+  ["triangle", triangleScene],
+  ["compute", computeScene],
+  ["rgb-triangle", rgbTriScene],
+  ["checkerboard-triangle", checkerboardTriScene],
+  ["many-triangles", manyTriScene],
 ]);
 
 let destroyFuncs: (() => void)[] = [];
