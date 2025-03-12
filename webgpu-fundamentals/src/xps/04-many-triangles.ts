@@ -8,11 +8,15 @@ const createShader = (device: GPUDevice) =>
     code: `
 struct OurStruct {
   color: vec4f,
-  scale: vec2f,
   offset: vec2f,
 };
 
+struct ScaleStruct {
+  scale: vec2f,
+}
+
 @group(0) @binding(0) var<uniform> ourStruct: OurStruct;
+@group(0) @binding(1) var<uniform> scaleStruct: ScaleStruct;
 
 @vertex fn vs(
   @builtin(vertex_index) vertexIndex : u32
@@ -23,7 +27,7 @@ struct OurStruct {
     vec2f(0.5, -0.5), // bottom right
   );
   return vec4f(
-    pos[vertexIndex] * ourStruct.scale + ourStruct.offset, 0.0, 1.0);
+    pos[vertexIndex] * scaleStruct.scale + ourStruct.offset, 0.0, 1.0);
 }
 
 @fragment fn fs() -> @location(0) vec4f {
@@ -46,14 +50,16 @@ const rand = (min?: number, max?: number) => {
 // byte offsets
 const offsets = {
   color: 0,
-  scale: 4,
-  offset: 6,
+  offset: 4,
+  scale: 0,
 };
 
-const uniformBufferSize =
+const staticUniformBufferSize =
   4 * 4 + // color is 32f (4xrgba)
-  2 * 4 + // scale is 2x32f (x,y)
-  2 * 4; // offset is 2x32f (x,y)
+  2 * 4 + // offset is 2x32f (x,y)
+  2 * 4; // padding
+
+const scaleBufferSize = 2 * 4; // scale is 2x32f (x,y)
 
 function createUniformBuffer(
   device: GPUDevice,
@@ -64,26 +70,42 @@ function createUniformBuffer(
   uniformValues: Float32Array<any>;
   bindGroup: GPUBindGroup;
 }[] {
-  const objectCount = 100;
+  const objectCount = 1000;
   const objectInfos = [];
 
   for (let i = 0; i < objectCount; ++i) {
-    const uniformBuffer = device.createBuffer({
-      size: uniformBufferSize,
+    // color/offset buffer (static)
+    const staticUniformBuffer = device.createBuffer({
+      label: `static uniform ${i}`,
+      size: staticUniformBufferSize,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
+    const uniformValues = new Float32Array(staticUniformBufferSize / 4);
+    uniformValues.set([rand(), rand(), rand(), 1], offsets.color);
+    uniformValues.set([rand(-1, 1), rand(-0.2, 0.2)], offsets.offset);
+    device.queue.writeBuffer(staticUniformBuffer, 0, uniformValues);
+
+    // Scale buffer (dynamic)
+    const scaleValues = new Float32Array(scaleBufferSize / 4);
+    const scaleBuffer = device.createBuffer({
+      label: `changing uniforms for obj: ${i}`,
+      size: scaleBufferSize,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
     const bindGroup = device.createBindGroup({
       label: `bgt-${i}`,
       layout: pipeline.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+      entries: [
+        { binding: 0, resource: { buffer: staticUniformBuffer } },
+        { binding: 1, resource: { buffer: scaleBuffer } },
+      ],
     });
-    const uniformValues = new Float32Array(uniformBufferSize / 4); // byte size to float32 size (4 bytes each)
-    uniformValues.set([rand(), rand(), rand(), 1], offsets.color);
-    uniformValues.set([rand(), rand()], offsets.offset);
+
     objectInfos.push({
-      scale: rand(0.2, 0.5),
-      uniformBuffer,
-      uniformValues,
+      scale: rand(0.1, 0.25),
+      uniformBuffer: scaleBuffer,
+      uniformValues: scaleValues,
       bindGroup,
     });
   }
