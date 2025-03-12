@@ -32,31 +32,62 @@ struct OurStruct {
 `,
   });
 
+const rand = (min?: number, max?: number) => {
+  if (min === undefined) {
+    min = 0;
+    max = 1;
+  } else if (max === undefined) {
+    max = min;
+    min = 0;
+  }
+  return min + Math.random() * (max - min);
+};
+
+// byte offsets
+const offsets = {
+  color: 0,
+  scale: 4,
+  offset: 6,
+};
+
+const uniformBufferSize =
+  4 * 4 + // color is 32f (4xrgba)
+  2 * 4 + // scale is 2x32f (x,y)
+  2 * 4; // offset is 2x32f (x,y)
+
 function createUniformBuffer(
   device: GPUDevice,
-): [
-  GPUBuffer,
-  Float32Array<ArrayBuffer>,
-  { color: number; scale: number; offset: number },
-] {
-  const uniformBufferSize =
-    4 * 4 + // color is 32f (4xrgba)
-    2 * 4 + // scale is 2x32f (x,y)
-    2 * 4; // offset is 2x32f (x,y)
-  const uniformBuffer = device.createBuffer({
-    size: uniformBufferSize,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  const uniformValues = new Float32Array(uniformBufferSize / 4); // byte size to float32 size (4 bytes each)
-  // byte offsets
-  const offsets = {
-    color: 0,
-    scale: 4,
-    offset: 6,
-  };
-  uniformValues.set([0, 1, 0, 1], offsets.color); // set the color
-  uniformValues.set([-0.5, -0.25], offsets.offset); // set the offset
-  return [uniformBuffer, uniformValues, offsets];
+  pipeline: GPURenderPipeline,
+): {
+  scale: number;
+  uniformBuffer: GPUBuffer;
+  uniformValues: Float32Array<any>;
+  bindGroup: GPUBindGroup;
+}[] {
+  const objectCount = 100;
+  const objectInfos = [];
+
+  for (let i = 0; i < objectCount; ++i) {
+    const uniformBuffer = device.createBuffer({
+      size: uniformBufferSize,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const bindGroup = device.createBindGroup({
+      label: `bgt-${i}`,
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    });
+    const uniformValues = new Float32Array(uniformBufferSize / 4); // byte size to float32 size (4 bytes each)
+    uniformValues.set([rand(), rand(), rand(), 1], offsets.color);
+    uniformValues.set([rand(), rand()], offsets.offset);
+    objectInfos.push({
+      scale: rand(0.2, 0.5),
+      uniformBuffer,
+      uniformValues,
+      bindGroup,
+    });
+  }
+  return objectInfos;
 }
 
 export async function manyTriangles(el: HTMLElement) {
@@ -75,19 +106,15 @@ export async function manyTriangles(el: HTMLElement) {
       targets: [{ format }], // pos 0 aligns with fragment shader output (location 0) ?
     },
   });
-  const [uniformBuffer, uniformValues, offsets] = createUniformBuffer(device);
-  const bindGroup = device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-  });
+  const objectInfos = createUniformBuffer(device, pipeline);
   // the texture we will render to
   const triangleRenderPassDescriptor = (
-    view: GPUTextureView,
+    ctx: GPUCanvasContext,
   ): GPURenderPassDescriptor => ({
     label: "basic render pass",
     colorAttachments: [
       {
-        view,
+        view: ctx.getCurrentTexture().createView(),
         clearValue: [0.16, 0.16, 0.53, 0],
         loadOp: "clear", // clear the texture before storing
         storeOp: "store", // store the result (as opposed to discard)
@@ -95,17 +122,23 @@ export async function manyTriangles(el: HTMLElement) {
     ],
   });
   function render() {
-    const aspect = ctx.canvas.width / ctx.canvas.height;
-    uniformValues.set([0.5 / aspect, 0.5], offsets.scale);
-    device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-    const renderPassDescriptor = triangleRenderPassDescriptor(
-      ctx.getCurrentTexture().createView(),
-    );
+    const renderPassDescriptor = triangleRenderPassDescriptor(ctx);
     const encoder = device.createCommandEncoder({ label: "our encoder " });
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
-    pass.draw(3); // call our vertex shader 3 times
+    // pass.setBindGroup(0, bindGroup);
+    const aspect = ctx.canvas.width / ctx.canvas.height;
+    for (const {
+      scale,
+      bindGroup,
+      uniformBuffer,
+      uniformValues,
+    } of objectInfos) {
+      uniformValues.set([scale / aspect, scale], offsets.scale);
+      device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+      pass.setBindGroup(0, bindGroup);
+      pass.draw(3);
+    }
     pass.end();
 
     const commandBuffer = encoder.finish();
