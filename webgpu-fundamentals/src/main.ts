@@ -4,6 +4,7 @@ import { computeScene } from "./xps/01-compute";
 import { rgbTriScene } from "./xps/02-rgb-triangle";
 import { checkerboardTriScene } from "./xps/03-checkerboard";
 import { manyTriScene } from "./xps/04-many-triangles";
+import { manyRingsScene } from "./xps/05-many-rings";
 
 export interface Scene {
   title: string;
@@ -17,6 +18,7 @@ const scenes = new Map<string, Scene>([
   ["rgb-triangle", rgbTriScene],
   ["checkerboard-triangle", checkerboardTriScene],
   ["many-triangles", manyTriScene],
+  ["many-rings", manyRingsScene],
 ]);
 
 let destroyFuncs: (() => void)[] = [];

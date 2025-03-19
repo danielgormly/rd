@@ -4,7 +4,7 @@ import { Scene } from "../main";
 
 const createShader = (device: GPUDevice) =>
   device.createShaderModule({
-    label: "manytriangles shaders",
+    label: "many triangle storage shaders",
     code: `
 struct OurStruct {
   color: vec4f,
@@ -15,8 +15,8 @@ struct ScaleStruct {
   scale: vec2f,
 }
 
-@group(0) @binding(0) var<uniform> ourStruct: OurStruct;
-@group(0) @binding(1) var<uniform> scaleStruct: ScaleStruct;
+@group(0) @binding(0) var<storage, read> ourStruct: OurStruct;
+@group(0) @binding(1) var<storage, read> scaleStruct: ScaleStruct;
 
 @vertex fn vs(
   @builtin(vertex_index) vertexIndex : u32
@@ -78,7 +78,7 @@ function createUniformBuffer(
     const staticUniformBuffer = device.createBuffer({
       label: `static uniform ${i}`,
       size: staticUniformBufferSize,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     const uniformValues = new Float32Array(staticUniformBufferSize / 4);
     uniformValues.set([rand(), rand(), rand(), 1], offsets.color);
@@ -90,7 +90,7 @@ function createUniformBuffer(
     const scaleBuffer = device.createBuffer({
       label: `changing uniforms for obj: ${i}`,
       size: scaleBufferSize,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
 
     const bindGroup = device.createBindGroup({
@@ -112,7 +112,7 @@ function createUniformBuffer(
   return objectInfos;
 }
 
-export async function manyTriangles(el: HTMLElement) {
+async function manyRings(el: HTMLElement) {
   const pane = new Pane();
   const [ctx, device, format] = await initWGPUCanvas(el, true);
 
@@ -171,8 +171,8 @@ export async function manyTriangles(el: HTMLElement) {
   return () => pane.dispose();
 }
 
-export const manyTriScene: Scene = {
-  title: "Many Triangles",
-  description: `Rendering many triangles using a uniform buffer (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
-  func: manyTriangles,
+export const manyRingsScene: Scene = {
+  title: "Many Rings",
+  description: `Rendering many rings using a storage buffer (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
+  func: manyRings,
 };
