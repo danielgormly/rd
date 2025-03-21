@@ -4,40 +4,24 @@ import { Scene } from "../main";
 
 const createShader = (device: GPUDevice) =>
   device.createShaderModule({
-    label: "rings storage shaders",
+    label: "textured rings shaders",
     code: `
-struct OurStruct {
-  color: vec4f,
-  offset: vec2f,
-};
-
-struct ScaleStruct {
-  scale: vec2f,
-}
-
-struct Vertex {
-  position: vec2f,
-}
-
-@group(0) @binding(0) var<storage, read> ourStructs: array<OurStruct>;
-@group(0) @binding(1) var<storage, read> otherStructs: array<ScaleStruct>;
-@group(0) @binding(2) var<storage, read> pos: array<Vertex>;
-
 struct VSOutput {
   @builtin(position) position: vec4f,
   @location(0) color: vec4f,
 }
 
 @vertex fn vs(
-  @builtin(vertex_index) vertexIndex : u32,
-  @builtin(instance_index) instanceIndex : u32
+  @location(0) position: vec2f,
+  @location(1) color: vec4f,
+  @location(2) offset: vec2f,
+  @location(3) scale: vec2f,
+  @location(4) perVertexColor: vec4f
 ) -> VSOutput {
-  let otherStruct = otherStructs[instanceIndex];
-  let ourStruct = ourStructs[instanceIndex];
-
   var vsOut: VSOutput;
-  vsOut.position = vec4f(pos[vertexIndex].position * otherStruct.scale + ourStruct.offset, 0.0, 1.0);
-  vsOut.color = ourStruct.color;
+  vsOut.position = vec4f(
+    position * scale + offset, 0.0, 1.0);
+  vsOut.color = color * perVertexColor;
   return vsOut;
 }
 
@@ -56,13 +40,23 @@ function createCircleVertices({
 } = {}) {
   // 2 triangles per subdivision, 3 verts per tri, 2 values (xy) each
   const numVertices = subdivisions * 3 * 2;
-  const vertexData = new Float32Array(subdivisions * 2 * 3 * 2);
+  const vertexData = new Float32Array(numVertices * (2 + 1));
+  const colorData = new Uint8Array(vertexData.buffer);
 
   let offset = 0;
-  const addVertex = (x: number, y: number) => {
+  let colorOffset = 8;
+  const addVertex = (x: number, y: number, r: number, g: number, b: number) => {
     vertexData[offset++] = x;
     vertexData[offset++] = y;
+    offset += 1; // skip the colour
+    colorData[colorOffset++] = r * 255;
+    colorData[colorOffset++] = g * 255;
+    colorData[colorOffset++] = b * 255;
+    colorOffset += 9; // skip extra byte and the position
   };
+
+  const innerColor = [1, 1, 1];
+  const outerColor = [0.5, 0.5, 0.5];
 
   // 2 triangles per subdivision
   // 0--1 4
@@ -81,14 +75,14 @@ function createCircleVertices({
     const s2 = Math.sin(angle2);
 
     // first triangle
-    addVertex(c1 * radius, s1 * radius);
-    addVertex(c2 * radius, s2 * radius);
-    addVertex(c1 * innerRadius, s1 * innerRadius);
+    addVertex(c1 * radius, s1 * radius, ...outerColor);
+    addVertex(c2 * radius, s2 * radius, ...outerColor);
+    addVertex(c1 * innerRadius, s1 * innerRadius, ...innerColor);
 
     // second triangle
-    addVertex(c1 * innerRadius, s1 * innerRadius);
-    addVertex(c2 * radius, s2 * radius);
-    addVertex(c2 * innerRadius, s2 * innerRadius);
+    addVertex(c1 * innerRadius, s1 * innerRadius, ...innerColor);
+    addVertex(c2 * radius, s2 * radius, ...outerColor);
+    addVertex(c2 * innerRadius, s2 * innerRadius, ...innerColor);
   }
   return {
     vertexData,
@@ -110,40 +104,42 @@ const rand = (min?: number, max?: number) => {
 // byte offsets
 const offsets = {
   color: 0,
-  offset: 4,
+  offset: 1,
   scale: 0,
 };
 
 const staticUnitSize =
-  4 * 4 + // color is 4x32f (4xrgba)
-  2 * 4 + // offset is 2x32f (x,y)
-  2 * 4; // padding
+  4 + // color is 4 bytes
+  2 * 4; // offset is 2x32f (x,y)
 
 function createStaticBuffer(device: GPUDevice, qty = 1000) {
   const size = staticUnitSize * qty;
 
   const buffer = device.createBuffer({
-    label: `static storage for objects`,
+    label: `vertex storage for color & offset`,
     size: size,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
 
-  const values = new Float32Array(size / 4);
+  const u8Values = new Uint8Array(size);
+  const f32Values = new Float32Array(u8Values.buffer);
   for (let i = 0; i < qty; ++i) {
-    const staticOffset = i * (staticUnitSize / 4);
+    const offsetU8 = i * staticUnitSize;
+    const offsetF32 = offsetU8 / 4;
     // Only set once
-    values.set([rand(), rand(), rand(), 1], staticOffset + offsets.color);
-    values.set(
-      [rand(-0.9, 0.9), rand(-0.9, 0.9)],
-      staticOffset + offsets.offset,
+    u8Values.set(
+      [rand(0.2, 1) * 255, 0.5 * 255, rand(0.9, 1) * 255, 255],
+      offsetU8 + offsets.color,
     );
-
-    device.queue.writeBuffer(buffer, 0, values);
+    f32Values.set(
+      [rand(-0.9, 0.9), rand(-0.9, 0.9)],
+      offsetF32 + offsets.offset,
+    );
   }
 
   return {
     buffer,
-    values,
+    f32Values,
   };
 }
 
@@ -155,7 +151,7 @@ function createDynamicBuffer(device: GPUDevice, qty = 1000) {
   const buffer = device.createBuffer({
     label: `dynamic storage for objects`,
     size: size,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
 
   const values = new Float32Array(size / 4); // 1000 * 2 * Float 32s
@@ -167,19 +163,19 @@ function createDynamicBuffer(device: GPUDevice, qty = 1000) {
 
 function createVertexBuffer(device: GPUDevice) {
   const { vertexData, numVertices } = createCircleVertices({
-    radius: 0.5,
-    innerRadius: 0.25,
+    radius: 0.25,
+    innerRadius: 0,
   });
   const buffer = device.createBuffer({
     label: "storage buffer vertices",
     size: vertexData.byteLength,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
   device.queue.writeBuffer(buffer, 0, vertexData);
   return [buffer, numVertices] as [GPUBuffer, number];
 }
 
-async function manyRings(el: HTMLElement) {
+async function fakeBalls(el: HTMLElement) {
   const pane = new Pane();
   const [ctx, device, format] = await initWGPUCanvas(el, true);
 
@@ -189,6 +185,30 @@ async function manyRings(el: HTMLElement) {
     layout: "auto",
     vertex: {
       module: shader,
+      buffers: [
+        {
+          arrayStride: 2 * 4 + 4, // 2 floats, 4 bytes each
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: "float32x2" }, // position
+            { shaderLocation: 4, offset: 8, format: "unorm8x4" }, // perVertexColor
+          ],
+        },
+        {
+          arrayStride: 4 + 2 * 4, // 6 floats, 4 bytes each
+          stepMode: "instance",
+          attributes: [
+            { shaderLocation: 1, offset: 0, format: "unorm8x4" },
+            { shaderLocation: 2, offset: 4, format: "float32x2" },
+          ],
+        },
+        {
+          arrayStride: 2 * 4, // 2 floats, 4 bytes each
+          stepMode: "instance",
+          attributes: [
+            { shaderLocation: 3, offset: 0, format: "float32x2" }, // scale
+          ],
+        },
+      ],
     },
     fragment: {
       module: shader,
@@ -208,7 +228,7 @@ async function manyRings(el: HTMLElement) {
     device,
     qty,
   );
-  const { buffer: staticBuffer, values: staticValues } = createStaticBuffer(
+  const { buffer: staticBuffer, f32Values: staticValues } = createStaticBuffer(
     device,
     qty,
   );
@@ -216,15 +236,6 @@ async function manyRings(el: HTMLElement) {
 
   const [vertexBuffer, numVertices] = createVertexBuffer(device);
 
-  const bindGroup = device.createBindGroup({
-    label: `object-bind-group`,
-    layout: pipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: staticBuffer } },
-      { binding: 1, resource: { buffer: dynamicBuffer } },
-      { binding: 2, resource: { buffer: vertexBuffer } },
-    ],
-  });
   // the texture we will render to
   const triangleRenderPassDescriptor = (
     ctx: GPUCanvasContext,
@@ -244,6 +255,9 @@ async function manyRings(el: HTMLElement) {
     const encoder = device.createCommandEncoder({ label: "our encoder " });
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
+    pass.setVertexBuffer(0, vertexBuffer);
+    pass.setVertexBuffer(1, staticBuffer);
+    pass.setVertexBuffer(2, dynamicBuffer);
     const aspect = ctx.canvas.width / ctx.canvas.height;
 
     objectInfos.forEach(({ scale }, ndx) => {
@@ -252,7 +266,6 @@ async function manyRings(el: HTMLElement) {
     });
     device.queue.writeBuffer(dynamicBuffer, 0, dynamicValues);
 
-    pass.setBindGroup(0, bindGroup);
     pass.draw(numVertices, qty);
     pass.end();
 
@@ -264,8 +277,8 @@ async function manyRings(el: HTMLElement) {
   return () => pane.dispose();
 }
 
-export const manyRingsScene: Scene = {
-  title: "Many Rings",
-  description: `Rendering many rings using a storage buffer (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
-  func: manyRings,
+export const fakeBallsScene: Scene = {
+  title: "Fake Balls",
+  description: `Modifying our rings to use vertex buffer & reducing inner radius to 0 (see <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html" target="_blank" rel="noopener noreferrer">webgpufundamentals.com</a>)`,
+  func: fakeBalls,
 };
