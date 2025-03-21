@@ -33,13 +33,13 @@ struct VSOutput {
 
 function createCircleVertices({
   radius = 1,
-  subdivisions = 24,
+  numSubdivisions = 24,
   innerRadius = 24,
   startAngle = 0,
   endAngle = Math.PI * 2,
 } = {}) {
   // 2 triangles per subdivision, 3 verts per tri, 2 values (xy) each
-  const numVertices = subdivisions * 3 * 2;
+  const numVertices = (numSubdivisions + 1) * 2;
   const vertexData = new Float32Array(numVertices * (2 + 1));
   const colorData = new Uint8Array(vertexData.buffer);
 
@@ -59,34 +59,48 @@ function createCircleVertices({
   const outerColor = [0.5, 0.5, 0.5];
 
   // 2 triangles per subdivision
-  // 0--1 4
-  // | / / |
-  // |/ /  |
-  // 2  3--5
-  for (let i = 0; i < subdivisions; ++i) {
-    const angle1 =
-      startAngle + ((i + 0) * (endAngle - startAngle)) / subdivisions;
-    const angle2 =
-      startAngle + ((i + 1) * (endAngle - startAngle)) / subdivisions;
+  //
+  // 0  2  4  6  8 ...
+  //
+  // 1  3  5  7  9 ...
+  for (let i = 0; i <= numSubdivisions; ++i) {
+    const angle =
+      startAngle + ((i + 0) * (endAngle - startAngle)) / numSubdivisions;
 
-    const c1 = Math.cos(angle1);
-    const s1 = Math.sin(angle1);
-    const c2 = Math.cos(angle2);
-    const s2 = Math.sin(angle2);
+    const c1 = Math.cos(angle);
+    const s1 = Math.sin(angle);
+
+    addVertex(c1 * radius, s1 * radius, ...outerColor);
+    addVertex(c1 * innerRadius, s1 * innerRadius, ...innerColor);
+  }
+
+  const indexData = new Uint32Array(numSubdivisions * 6);
+  let ndx = 0;
+
+  // 1st tri  2nd tri  3rd tri  4th tri
+  // 0 1 2    2 1 3    2 3 4    4 3 5
+  //
+  // 0--2        2     2--4        4  .....
+  // | /        /|     | /        /|
+  // |/        / |     |/        / |
+  // 1        1--3     3        3--5  .....
+  for (let i = 0; i < numSubdivisions; ++i) {
+    const ndxOffset = i * 2;
 
     // first triangle
-    addVertex(c1 * radius, s1 * radius, ...outerColor);
-    addVertex(c2 * radius, s2 * radius, ...outerColor);
-    addVertex(c1 * innerRadius, s1 * innerRadius, ...innerColor);
+    indexData[ndx++] = ndxOffset;
+    indexData[ndx++] = ndxOffset + 1;
+    indexData[ndx++] = ndxOffset + 2;
 
     // second triangle
-    addVertex(c1 * innerRadius, s1 * innerRadius, ...innerColor);
-    addVertex(c2 * radius, s2 * radius, ...outerColor);
-    addVertex(c2 * innerRadius, s2 * innerRadius, ...innerColor);
+    indexData[ndx++] = ndxOffset + 2;
+    indexData[ndx++] = ndxOffset + 1;
+    indexData[ndx++] = ndxOffset + 3;
   }
   return {
     vertexData,
-    numVertices,
+    indexData,
+    numVertices: indexData.length,
   };
 }
 
@@ -162,7 +176,7 @@ function createDynamicBuffer(device: GPUDevice, qty = 1000) {
 }
 
 function createVertexBuffer(device: GPUDevice) {
-  const { vertexData, numVertices } = createCircleVertices({
+  const { vertexData, indexData, numVertices } = createCircleVertices({
     radius: 0.25,
     innerRadius: 0,
   });
@@ -172,7 +186,13 @@ function createVertexBuffer(device: GPUDevice) {
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
   device.queue.writeBuffer(buffer, 0, vertexData);
-  return [buffer, numVertices] as [GPUBuffer, number];
+  const indexBuffer = device.createBuffer({
+    label: "index buffer",
+    size: indexData.byteLength,
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(indexBuffer, 0, indexData);
+  return [buffer, numVertices, indexBuffer] as [GPUBuffer, number, GPUBuffer];
 }
 
 async function fakeBalls(el: HTMLElement) {
@@ -234,7 +254,7 @@ async function fakeBalls(el: HTMLElement) {
   );
   device.queue.writeBuffer(staticBuffer, 0, staticValues);
 
-  const [vertexBuffer, numVertices] = createVertexBuffer(device);
+  const [vertexBuffer, numVertices, indexBuffer] = createVertexBuffer(device);
 
   // the texture we will render to
   const triangleRenderPassDescriptor = (
@@ -258,6 +278,7 @@ async function fakeBalls(el: HTMLElement) {
     pass.setVertexBuffer(0, vertexBuffer);
     pass.setVertexBuffer(1, staticBuffer);
     pass.setVertexBuffer(2, dynamicBuffer);
+    pass.setIndexBuffer(indexBuffer, "uint32");
     const aspect = ctx.canvas.width / ctx.canvas.height;
 
     objectInfos.forEach(({ scale }, ndx) => {
@@ -266,7 +287,7 @@ async function fakeBalls(el: HTMLElement) {
     });
     device.queue.writeBuffer(dynamicBuffer, 0, dynamicValues);
 
-    pass.draw(numVertices, qty);
+    pass.drawIndexed(numVertices, qty);
     pass.end();
 
     const commandBuffer = encoder.finish();
