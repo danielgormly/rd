@@ -71,7 +71,6 @@ export async function textures(el: HTMLElement) {
     { bytesPerRow: textureDimensions[0] * 4 },
     { width: textureDimensions[0], height: textureDimensions[1] },
   );
-  const sampler = device.createSampler();
   const pipeline = device.createRenderPipeline({
     label: "hardcoded rgb triangle pipeline",
     layout: "auto",
@@ -85,13 +84,27 @@ export async function textures(el: HTMLElement) {
       targets: [{ format }], // pos 0 aligns with fragment shader output (location 0) ?
     },
   });
-  const bindGroup = device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: sampler },
-      { binding: 1, resource: texture.createView() },
-    ],
-  });
+  const bindGroups: GPUBindGroup[] = [];
+  for (let i = 0; i < 8; i++) {
+    const sampler = device.createSampler({
+      addressModeU: i & 1 ? "repeat" : "clamp-to-edge",
+      addressModeV: i & 2 ? "repeat" : "clamp-to-edge",
+      magFilter: i & 4 ? "linear" : "nearest",
+    });
+    const bindGroup = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: sampler },
+        { binding: 1, resource: texture.createView() },
+      ],
+    });
+    bindGroups.push(bindGroup);
+  }
+  const settings = {
+    addressModeU: "repeat",
+    addressModeV: "repeat",
+    magFilter: "linear",
+  };
   // the texture we will render to
   const triangleRenderPassDescriptor = (
     view: GPUTextureView,
@@ -107,6 +120,11 @@ export async function textures(el: HTMLElement) {
     ],
   });
   function render() {
+    const ndx =
+      (settings.addressModeU === "repeat" ? 1 : 0) +
+      (settings.addressModeV === "repeat" ? 2 : 0) +
+      (settings.magFilter === "linear" ? 4 : 0);
+    const bindGroup = bindGroups[ndx];
     const renderPassDescriptor = triangleRenderPassDescriptor(
       ctx.getCurrentTexture().createView(),
     );
