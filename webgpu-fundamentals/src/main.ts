@@ -6,6 +6,7 @@ import { checkerboardTriScene } from "./xps/03-checkerboard";
 import { manyTriScene } from "./xps/04-many-triangles";
 import { manyRingsScene } from "./xps/05-many-rings";
 import { fakeBallsScene } from "./xps/06-fake-balls";
+import { texturesScene } from "./xps/07-textures";
 
 export interface Scene {
   title: string;
@@ -21,6 +22,7 @@ const scenes = new Map<string, Scene>([
   ["many-triangles", manyTriScene],
   ["many-rings", manyRingsScene],
   ["fake-balls", fakeBallsScene],
+  ["textures", texturesScene],
 ]);
 
 let destroyFuncs: (() => void)[] = [];

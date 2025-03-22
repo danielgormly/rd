@@ -11,3 +11,4 @@ Buffers are created and bound to a group (as a member of its user defined type t
 - Can be written to within shader code
 
 ## Instancing
+Allows us to draw the same set of vertex data many times over with varying qualities. i.e. read 1 mesh & draw with a different data for each instance.
