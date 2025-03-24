@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@tweakpane/core':
+        specifier: ^2.0.5
+        version: 2.0.5
       tweakpane:
         specifier: ^4.0.5
         version: 4.0.5
@@ -263,6 +266,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@tweakpane/core@2.0.5':
+    resolution: {integrity: sha512-punBgD5rKCF5vcNo6BsSOXiDR/NSs9VM7SG65QSLJIxfRaGgj54ree9zQW6bO3pNFf3AogiGgaNODUVQRk9YqQ==}
+
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
 
@@ -478,6 +484,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.28.1':
     optional: true
+
+  '@tweakpane/core@2.0.5': {}
 
   '@types/estree@1.0.6': {}
 

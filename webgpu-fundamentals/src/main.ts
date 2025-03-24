@@ -32,6 +32,7 @@ async function route(hash: string) {
   if (!board) return;
   const destroy = destroyFuncs.shift();
   if (destroy) destroy();
+  board.innerHTML = "";
   const id = hash ? hash.slice(1) : "triangle";
   const exp = scenes.get(id);
   if (!exp) return;

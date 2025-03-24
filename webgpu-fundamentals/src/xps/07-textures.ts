@@ -54,7 +54,9 @@ const textureData = new Uint8Array<any>(
 );
 
 export async function textures(el: HTMLElement) {
-  const pane = new Pane();
+  const pane = new Pane({
+    container: el,
+  });
   const [ctx, device, format] = await initWGPUCanvas(el, true);
   const module = device.createShaderModule({
     label: "hardcoded rgb triangle shader",
@@ -105,6 +107,15 @@ export async function textures(el: HTMLElement) {
     addressModeV: "repeat",
     magFilter: "linear",
   };
+  pane.addBinding(settings, "addressModeU", {
+    options: { repeat: "repeat", "clamp-to-edge": "clamp-to-edge" },
+  });
+  pane.addBinding(settings, "addressModeV", {
+    options: { repeat: "repeat", "clamp-to-edge": "clamp-to-edge" },
+  });
+  pane.addBinding(settings, "magFilter", {
+    options: { nearest: "nearest", linear: "linear" },
+  });
   // the texture we will render to
   const triangleRenderPassDescriptor = (
     view: GPUTextureView,
@@ -139,7 +150,9 @@ export async function textures(el: HTMLElement) {
     device.queue.submit([commandBuffer]);
     debug(ctx);
   }
+
   resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
+  pane.on("change", () => render());
   return () => pane.dispose();
 }
 

@@ -44,6 +44,7 @@ a:hover {
 }
 
 #board {
+    position: relative;
     width: 100%;
     box-sizing: border-box;
 }
@@ -75,4 +76,10 @@ canvas {
     min-height: 1.5em;
     padding: 1em 0 0;
     color: rgb(112, 92, 92);
+}
+
+.tp-rotv {
+    position: absolute;
+    right: 0.5em;
+    top: 0.5em;
 }
