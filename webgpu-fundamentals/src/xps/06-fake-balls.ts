@@ -292,7 +292,11 @@ async function fakeBalls(el: HTMLElement) {
     device.queue.submit([commandBuffer]);
     debug(ctx);
   }
-  resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
+  resizeCanvas({
+    canvas: ctx.canvas as HTMLCanvasElement,
+    device,
+    cb: render,
+  });
 }
 
 export const fakeBallsScene: Scene = {

@@ -151,7 +151,12 @@ export async function textures(el: HTMLElement) {
     debug(ctx);
   }
 
-  resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
+  resizeCanvas({
+    canvas: ctx.canvas as HTMLCanvasElement,
+    device,
+    cb: render,
+    scaleFactor: 1 / 64,
+  });
   pane.on("change", () => render());
   return () => pane.dispose();
 }

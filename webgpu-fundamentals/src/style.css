@@ -68,6 +68,8 @@ canvas {
     height: 400px;
     border-radius: 4px;
     box-sizing: border-box;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 
 #debug {
