@@ -1,4 +1,3 @@
-import { Pane } from "tweakpane";
 import { debug, initWGPUCanvas, resizeCanvas } from "../common";
 import { Scene } from "../main";
 
@@ -113,7 +112,6 @@ function createUniformBuffer(
 }
 
 export async function manyTriangles(el: HTMLElement) {
-  const pane = new Pane();
   const [ctx, device, format] = await initWGPUCanvas(el, true);
 
   const shader = createShader(device);
@@ -168,7 +166,6 @@ export async function manyTriangles(el: HTMLElement) {
     debug(ctx);
   }
   resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
-  return () => pane.dispose();
 }
 
 export const manyTriScene: Scene = {

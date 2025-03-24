@@ -1,4 +1,3 @@
-import { Pane } from "tweakpane";
 import { debug, initWGPUCanvas, resizeCanvas } from "../common";
 import { Scene } from "../main";
 
@@ -37,7 +36,6 @@ const fsCode = `
   }`;
 
 export async function checkerboardTriangle(el: HTMLElement) {
-  const pane = new Pane();
   const [ctx, device, format] = await initWGPUCanvas(el, true);
   const vsModule = device.createShaderModule({
     label: "checkerboard vertex",
@@ -87,7 +85,6 @@ export async function checkerboardTriangle(el: HTMLElement) {
     debug(ctx);
   }
   resizeCanvas(ctx.canvas as HTMLCanvasElement, device, render);
-  return () => pane.dispose();
 }
 
 export const checkerboardTriScene: Scene = {
