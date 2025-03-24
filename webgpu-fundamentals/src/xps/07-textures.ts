@@ -7,6 +7,14 @@ struct OurVertexShaderOutput {
   @builtin(position) position: vec4f,
   @location(0) texcoord: vec2f,
 };
+
+struct Uniforms {
+  scale: vec2f,
+  offset: vec2f,
+};
+
+@group(0) @binding(2) var<uniform> uni: Uniforms;
+
 // vertex shader
 @vertex fn vs(
   @builtin(vertex_index) vertexIndex : u32
@@ -23,7 +31,7 @@ struct OurVertexShaderOutput {
   );
   var vsOutput: OurVertexShaderOutput;
   let xy = pos[vertexIndex];
-  vsOutput.position = vec4f(xy, 0.0, 1.0);
+  vsOutput.position = vec4f(xy * uni.scale + uni.offset, 0.0, 1.0);
   vsOutput.texcoord = xy; // interpolated between the 3 vertices of each triangle when passed to fragment shader
   return vsOutput;
 }
@@ -52,6 +60,28 @@ const textureData = new Uint8Array<any>(
     [b, _, _, _, _],
   ].flat(2),
 );
+
+function createUniformBuffer(device: GPUDevice) {
+  // create a buffer for the uniform values
+  const uniformBufferSize =
+    2 * 4 + // scale is 2 32bit floats (4bytes each)
+    2 * 4; // offset is 2 32bit floats (4bytes each)
+  const buffer = device.createBuffer({
+    label: "uniforms for quad",
+    size: uniformBufferSize,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const values = new Float32Array(uniformBufferSize / 4);
+  const offsets = {
+    scale: 0,
+    offset: 2,
+  };
+  return {
+    buffer,
+    values,
+    offsets,
+  };
+}
 
 export async function textures(el: HTMLElement) {
   const pane = new Pane({
@@ -86,18 +116,26 @@ export async function textures(el: HTMLElement) {
       targets: [{ format }], // pos 0 aligns with fragment shader output (location 0) ?
     },
   });
+  const {
+    buffer: uniformBuffer,
+    values: uniformValues,
+    offsets: uniformOffsets,
+  } = createUniformBuffer(device);
+
   const bindGroups: GPUBindGroup[] = [];
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 16; ++i) {
     const sampler = device.createSampler({
       addressModeU: i & 1 ? "repeat" : "clamp-to-edge",
       addressModeV: i & 2 ? "repeat" : "clamp-to-edge",
       magFilter: i & 4 ? "linear" : "nearest",
+      minFilter: i & 8 ? "linear" : "nearest",
     });
     const bindGroup = device.createBindGroup({
       layout: pipeline.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: sampler },
         { binding: 1, resource: texture.createView() },
+        { binding: 2, resource: { buffer: uniformBuffer } },
       ],
     });
     bindGroups.push(bindGroup);
@@ -106,6 +144,7 @@ export async function textures(el: HTMLElement) {
     addressModeU: "repeat",
     addressModeV: "repeat",
     magFilter: "linear",
+    minFilter: "linear",
   };
   pane.addBinding(settings, "addressModeU", {
     options: { repeat: "repeat", "clamp-to-edge": "clamp-to-edge" },
@@ -114,6 +153,9 @@ export async function textures(el: HTMLElement) {
     options: { repeat: "repeat", "clamp-to-edge": "clamp-to-edge" },
   });
   pane.addBinding(settings, "magFilter", {
+    options: { nearest: "nearest", linear: "linear" },
+  });
+  pane.addBinding(settings, "minFilter", {
     options: { nearest: "nearest", linear: "linear" },
   });
   // the texture we will render to
@@ -130,12 +172,26 @@ export async function textures(el: HTMLElement) {
       },
     ],
   });
-  function render() {
+  function render(time = 0) {
+    time *= 0.001;
     const ndx =
       (settings.addressModeU === "repeat" ? 1 : 0) +
       (settings.addressModeV === "repeat" ? 2 : 0) +
-      (settings.magFilter === "linear" ? 4 : 0);
+      (settings.magFilter === "linear" ? 4 : 0) +
+      (settings.minFilter === "linear" ? 8 : 0);
     const bindGroup = bindGroups[ndx];
+
+    // compute a scale that will draw our 0 to 1 clip space quad
+    // 2x2 pixels in the canvas.
+    const scaleX = 4 / ctx.canvas.width;
+    const scaleY = 4 / ctx.canvas.height;
+
+    uniformValues.set([scaleX, scaleY], uniformOffsets.scale); // set the scale
+    uniformValues.set([Math.sin(time * 0.25), -0.8], uniformOffsets.offset); // set the offset
+
+    // copy the values from JavaScript to the GPU
+    device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+
     const renderPassDescriptor = triangleRenderPassDescriptor(
       ctx.getCurrentTexture().createView(),
     );
@@ -149,6 +205,7 @@ export async function textures(el: HTMLElement) {
     const commandBuffer = encoder.finish();
     device.queue.submit([commandBuffer]);
     debug(ctx);
+    requestAnimationFrame(render);
   }
 
   resizeCanvas({
@@ -157,7 +214,7 @@ export async function textures(el: HTMLElement) {
     cb: render,
     scaleFactor: 1 / 64,
   });
-  pane.on("change", () => render());
+  // pane.on("change", () => render());
   return () => pane.dispose();
 }
 
