@@ -1,4 +1,7 @@
 fn main() {
+
+  // Lang features
+
   let mut x = 5;
   println!("The value of x is {x}");
   x = 6;
@@ -23,4 +26,17 @@ fn main() {
   let arrieta: [f32; 2] = [2.0, 4.0];
   println!("my array has {} vals of {} and {}", arrieta.len(), arrieta[0], arrieta[1]);
 
+  // Ownership
+  let s = "hi";
+  let r = &(s.to_owned() + "yo");
+  let mut g = String::from("bo");
+  g.push_str("boo");
+  println!("hi {r} {g}");
+
+  woah(g.clone()); // If I didn't clone we'd be in for a bad time, as drop is called here when the object is passed into a function, copying its stack, maintaining its pointer, but making it invalid after this point
+  println!("no longer valid?! {}", g);
+}
+
+fn woah(some_string: String) {
+  println!("woah: {}", some_string);
 }
