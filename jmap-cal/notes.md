@@ -1,10 +1,10 @@
 # Notes on JMAP, specifically JMAP cal & contacts
 
 - Core protocol https://jmap.io/spec-core.html
-- Websocket protocol https://www.rfc-editor.org/rfc/rfc8887.html
 - Sharing https://jmap.io/spec-sharing.html
 - Quotas https://www.rfc-editor.org/rfc/rfc9425.html
 - Calendars https://jmap.io/spec-calendars.html
+- Websocket protocol https://www.rfc-editor.org/rfc/rfc8887.html
 - Contacts https://jmap.io/spec-contacts.html
 
 ## Core
@@ -19,7 +19,7 @@
 This is the first point of contact, it contains an `urn:ietf:params:jmap:core` object that contains file size/object qty limitations, accounts, the user's primary account, username, urls, state.
 
 For Airday, I could structure it like
-- user: daniel@air.day
+- auth: daniel@air.day
 -- primaryaccount: airday:uuid:primary
 -- calendar-2: airday:uuid:calendar-2
 -- calendar-3: airday:uuid:calendar-3
