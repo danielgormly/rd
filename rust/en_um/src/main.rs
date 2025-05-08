@@ -1,3 +1,5 @@
+use rand::Rng;
+
 #[derive(Debug)]
 enum IpAddrKind {
     V4(u8, u8, u8, u8),
@@ -17,6 +19,47 @@ struct Test {
     status: Status,
 }
 
+enum Quality {
+    Bronze,
+    Gold,
+}
+
+enum Coin {
+    Penny,
+    Nickel,
+    Dime,
+    Quarter,
+    LuckyCoin(Quality),
+    Shrapnel,
+    Garbage,
+}
+
+fn value_in_cents(coin: &Coin) -> f64 {
+    match coin {
+        Coin::Penny => 1.0,
+        Coin::Nickel => 5.0,
+        Coin::Dime => 10.0,
+        Coin::Quarter => 25.0,
+        Coin::LuckyCoin(quality) => {
+            let mut lower_range: u8 = 1;
+            let mut upper_range: u8 = 50;
+            match quality {
+                Quality::Gold => {
+                    lower_range = 25;
+                    upper_range = 150;
+                    println!("Flipping lucky gold coin!!!!");
+                }
+                Quality::Bronze => {
+                    println!("Flipping lucky bronze coin!!!!");
+                }
+            }
+            let random_int_val: f64 = rand::rng().random_range(lower_range..=upper_range).into();
+            random_int_val
+        }
+        _ => 0.1,
+    }
+}
+
 fn main() {
     let home = IpAddrKind::V4(127, 0, 0, 1);
     let loopback = IpAddrKind::V6(String::from("::1"));
@@ -26,9 +69,18 @@ fn main() {
     let test = Test { status };
     println!("{:?}", status);
     println!("{:?}", test);
+    let coin_bag: Vec<Coin> = vec![Coin::Penny, Coin::LuckyCoin(Quality::Gold), Coin::Garbage];
+    let sum = sum_coins(&coin_bag);
+    println!("your coin bag is worth ${}", sum)
+}
 
-    // route(home);
-    // route(loopback);
+fn sum_coins(coin_bag: &Vec<Coin>) -> f64 {
+    let mut sum: f64 = 0.0;
+    for coin in coin_bag.iter() {
+        let val = value_in_cents(&coin);
+        sum = sum + val;
+    }
+    sum
 }
 
 // fn route(ip_kind: IpAddrKind) {}
