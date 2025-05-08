@@ -19,6 +19,7 @@ struct Test {
     status: Status,
 }
 
+#[derive(Debug)]
 enum Quality {
     Bronze,
     Gold,
@@ -29,7 +30,7 @@ enum Coin {
     Nickel,
     Dime,
     Quarter,
-    LuckyCoin(Quality),
+    LuckyCoin(Option<Quality>),
     Shrapnel,
     Garbage,
 }
@@ -44,14 +45,12 @@ fn value_in_cents(coin: &Coin) -> f64 {
             let mut lower_range: u8 = 1;
             let mut upper_range: u8 = 50;
             match quality {
-                Quality::Gold => {
+                Some(Quality::Gold) => {
                     lower_range = 25;
                     upper_range = 150;
                     println!("Flipping lucky gold coin!!!!");
                 }
-                Quality::Bronze => {
-                    println!("Flipping lucky bronze coin!!!!");
-                }
+                _ => {}
             }
             let random_int_val: f64 = rand::rng().random_range(lower_range..=upper_range).into();
             random_int_val
@@ -69,9 +68,35 @@ fn main() {
     let test = Test { status };
     println!("{:?}", status);
     println!("{:?}", test);
-    let coin_bag: Vec<Coin> = vec![Coin::Penny, Coin::LuckyCoin(Quality::Gold), Coin::Garbage];
+    let coin_bag: Vec<Coin> = vec![
+        Coin::Penny,
+        Coin::LuckyCoin(Some(Quality::Gold)),
+        Coin::Garbage,
+    ];
     let sum = sum_coins(&coin_bag);
-    println!("your coin bag is worth ${}", sum)
+    println!("your coin bag is worth ${}", sum);
+
+    let mut config_max = Some(53u8);
+    config_max = None; // enable this line triggers _ option, thus showing Some() and None satisfy Option type, we don't need to explicitly define.
+    match config_max {
+        Some(max) => println!("The max to be configured is {max}"),
+        _ => (),
+    }
+
+    // Concise way of writing same logic, ommitting _
+    // Introducing a let with Some(x)
+    let config_min = Some(3u8);
+    if let Some(min) = config_min {
+        println!("min config is {min}");
+    } else {
+        // This block is redundant
+    }
+
+    let gold_coin = Coin::Garbage;
+    let Coin::LuckyCoin(quality) = gold_coin else {
+        println!("My coin is not a lucky one");
+        return ();
+    };
 }
 
 fn sum_coins(coin_bag: &Vec<Coin>) -> f64 {
