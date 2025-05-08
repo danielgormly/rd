@@ -19,3 +19,8 @@ rustc is in the dark re. the project structure - cargo knows about that and pass
 
 ### Libraries
 Created with cargo new restaurant --lib
+
+### Notes on `use`
+- `pub use` can be used to re-export an item, generally, hoisting it up for easier access by a library's consumer.
+- Curly braced lists can be used within use statements to import multiple submodules from the same parent: `use std::io::{self, Write};`, in this case, `self` is used to bring in the parent itself
+- `use xyz:xyz as banana` works to rename
