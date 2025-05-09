@@ -47,7 +47,7 @@ fn main() {
     let mut z = woah(g.clone());
     let c = &z; // we can hold multiple immutable refs
     by_ref(c);
-    let dz = &mut z; // but if any of those are mutable, we can only ref to one
+    let dz = &mut z; // but if any of those are mutable, we can only ref to one, we can add this here bc we no longer use the immutable refs
     mut_ref(dz);
 
     // Slices
