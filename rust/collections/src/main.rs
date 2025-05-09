@@ -1,8 +1,5 @@
 // vectors (numeros variables de valores se almanacen juntos)
-// strings (colleción de cáracters)
-// hash maps (kv)
-
-fn main() {
+fn vectors() {
     // Creating a vector:
     let v: Vec<i32> = Vec::new();
     println!("{:?}", v);
@@ -44,4 +41,33 @@ fn main() {
         println!("print {idx} index updated (+5) val of nv: {}", i);
         idx += 1;
     }
+}
+
+// strings (colleción de cáracters)
+// str = is the string slice, core string type of rust
+// generally borrowed i.e. &str
+// "string literals are stored in the binary"
+// the String type (from the std library) is a growable, mutable, owned, UTF-8 encoded string type
+// String type is a wrapper around a Vec<T>
+fn strings() {
+    let mut s = String::new(); // We don't actually need to create the new type here
+    s = "hellow".to_string(); // as this ends up creating a String type
+    let sp = String::from("hello"); // another way to go
+    s.push_str(" world");
+    print!("{s}");
+
+    let s1 = String::from("Hello");
+    let s2 = String::from("World");
+    let s3 = s1 + &s2;
+    println!("\n{s3}")
+    // So here, our + is really a String.add() which consumes (moves) s1, with s2 it copies the bytes
+    // and then it creates a new String combined with both of them
+    // Rust strings do not support indexing!!!
+}
+
+// hash maps (kv)
+
+fn main() {
+    vectors();
+    strings()
 }
