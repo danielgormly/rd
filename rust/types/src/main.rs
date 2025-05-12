@@ -83,5 +83,17 @@ fn main() {
     println!("the largest number is {res}");
     let chars = vec!['b', 'y', 'l', 'l', 'c'];
     let res = largest_char(&chars);
-    println!("the largest char is {res}")
+    println!("the largest char is {res}");
+
+    let mut bz = String::from("Short");
+    let lng = longest(&mut bz, &"extremely long");
+    println!("{lng}");
+}
+
+fn longest<'a>(x: &'a mut String, y: &str) -> &'a str {
+    if x.len() > y.len() {
+        return x;
+    }
+    *x = y.to_string();
+    x
 }
