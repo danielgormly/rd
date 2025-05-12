@@ -1,3 +1,5 @@
+use types::aggregator::{Summary, Tweet, notify};
+
 // Generics, traits & lifetimes
 
 fn largest_i32(list: &[i32]) -> &i32 {
@@ -57,13 +59,23 @@ fn main() {
     let integer = Point { x: 5, y: 10 };
     let float = Point { x: 5.0, y: 10.0 };
 
+    let tweet = Tweet {
+        username: String::from("horse_ebooks"),
+        content: String::from("of course"),
+        reply: false,
+        retweet: false,
+    };
+
+    notify(&tweet);
+
     println!(
-        "{} {} {} {} {}",
+        "{} {} {} {} {} {}",
         integer.x(),
         integer.y,
         float.x,
         float.y,
-        float.distance_from_origin()
+        float.distance_from_origin(),
+        tweet.summarize(),
     );
 
     let number_list = vec![34, 50, 25, 100, 65];
