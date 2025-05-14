@@ -41,7 +41,7 @@ struct Rectangle {
     height: u32,
 }
 
-fn main() {
+fn closures() {
     let store = Inventory {
         shirts: vec![ShirtColor::Blue, ShirtColor::Red, ShirtColor::Blue],
     };
@@ -108,4 +108,48 @@ fn main() {
 
     list.sort_by_key(|r| r.width);
     println!("{list:#?}");
+}
+
+fn iterators() {
+    let v1 = vec![1, 2, 3];
+    let mut v1_iter = v1.iter();
+    v1_iter.next();
+
+    for val in v1_iter {
+        println!("got: {val}")
+    }
+
+    let shoes = vec![
+        Shoe {
+            size: 10,
+            style: String::from("sneaker"),
+        },
+        Shoe {
+            size: 13,
+            style: String::from("sandal"),
+        },
+        Shoe {
+            size: 10,
+            style: String::from("boot"),
+        },
+    ];
+
+    let size = 10;
+    let in_my_size = shoes_in_size(shoes, size);
+    println!("{size}");
+}
+
+fn main() {
+    closures();
+    iterators();
+}
+
+#[derive(PartialEq, Debug)]
+struct Shoe {
+    size: u32,
+    style: String,
+}
+
+fn shoes_in_size(shoes: Vec<Shoe>, shoe_size: u32) -> Vec<Shoe> {
+    shoes.into_iter().filter(|s| s.size == shoe_size).collect()
 }
