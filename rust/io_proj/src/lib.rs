@@ -1,3 +1,7 @@
+//! # io_proj
+//! A grep clone.<br />
+//! Not very interesting.
+
 use std::env;
 use std::error::Error;
 use std::fs;
@@ -45,6 +49,15 @@ impl Config {
     }
 }
 
+/// This is run when we hit cargo test
+///
+/// # Examples
+/// ```
+/// use io_proj::search;
+/// let query = String::from("Hello");
+/// let contents = String::from("Hello friends");
+/// search(&query, &contents);
+/// ```
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     contents
         .lines()
