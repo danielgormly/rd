@@ -110,6 +110,11 @@ fn rc_explore() {
     println!("count after c goes out of scope = {}", Rc::strong_count(&a));
 }
 
+fn ref_cell() {
+    // Reference cells (RefCell<T>) are ignored by the compiler, and only enforced at runtime
+    // RefCell<T>
+}
+
 fn main() {
     let b = Box::new(5); // heap stored val, dereferenced as normal
     println!("b = {b}");
