@@ -4,6 +4,7 @@ use std::rc::Rc;
 // We use Box to stuff on the Heap
 // ensuring data redirection and not storing values unknown at compile time
 // In lists, we may want referenced values in multiple places (like live clones)
+// Normally,
 //
 // This is so we don't lose track of structures in memory & avoid garbage collection
 // Interior mutability: mutate data despite immutable references to that data, at runtime, circumventing the compiler
