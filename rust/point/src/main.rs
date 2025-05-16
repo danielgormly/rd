@@ -9,7 +9,7 @@
 use std::ops::Deref;
 
 pub mod ConsList {
-    enum List {
+    pub enum List {
         Cons(i32, Box<List>),
         Nil,
     }
@@ -65,6 +65,51 @@ fn dref_coersion(name: &str) {
     println!("Hello, {name}!");
 }
 
+struct CustomSmartPointer {
+    data: String,
+}
+
+impl Drop for CustomSmartPointer {
+    fn drop(&mut self) {
+        println!("Dropping CustomSmartPointer with data `{}`!", self.data);
+    }
+}
+
+fn drop_me() {
+    let c = CustomSmartPointer {
+        data: String::from("my stuff"),
+    };
+    drop(c);
+    let d = CustomSmartPointer {
+        data: String::from("other stuff"),
+    }; // if we don't drop c early, d gets dropped first! FILO
+    println!("CustomSmartPointers created");
+}
+
+pub mod RConsList {
+    pub enum List {
+        Cons(i32, Rc<List>),
+        Nil,
+    }
+    use std::rc::Rc;
+}
+
+// reference counting (single-threaded scenarios only)
+// required to allow multiple ownership
+fn rc_explore() {
+    use RConsList::List::{Cons, Nil};
+    use std::rc::Rc;
+    let a = Rc::new(Cons(5, Rc::new(Cons(10, Rc::new(Nil)))));
+    println!("count after creating a = {}", Rc::strong_count(&a));
+    let b = Cons(3, Rc::clone(&a));
+    println!("count after creating b = {}", Rc::strong_count(&a));
+    {
+        let c = Cons(4, Rc::clone(&a));
+        println!("count after creating c = {}", Rc::strong_count(&a));
+    }
+    println!("count after c goes out of scope = {}", Rc::strong_count(&a));
+}
+
 fn main() {
     let b = Box::new(5); // heap stored val, dereferenced as normal
     println!("b = {b}");
@@ -75,4 +120,6 @@ fn main() {
     let m = MyBox::new(String::from("Rust"));
     dref_coersion(&m); // dereference operator uses custom Deref implementation
     dref_coersion(&(*m)[..]); // explicit dereference!
+    drop_me();
+    rc_explore();
 }
