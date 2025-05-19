@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use ref_cycle::graph::{Graph, Node};
 
 // We use Box to allocate values on the Heap
 // ensuring data redirection, allowing for data structures of sizes unknown at compile time
@@ -15,47 +14,6 @@ use std::rc::Rc;
 // So Rc<RefCell<i32>>
 // is saying that you can hold multiple immutable references to a RefCell that you CAN mutate.
 // RefCell<Rc<i32>>, you wouldn't be able to modify the i32, but you could swap out the RC & double the RefCell
-
-struct Graph {
-    nodes: Vec<Rc<Node>>,
-}
-
-impl Graph {
-    fn new() -> Self {
-        Graph { nodes: vec![] }
-    }
-    fn add_node(&mut self, node: Node) -> usize {
-        self.nodes.push(Rc::new(node));
-        self.nodes.len() - 1
-    }
-    fn connect_nodes(&self, from_idx: usize, to_idx: usize) {
-        let from_node = &self.nodes[from_idx];
-        let to_node = Rc::clone(&self.nodes[to_idx]);
-
-        // Get mutable borrow
-        let mut connections = from_node.connections.borrow_mut();
-
-        connections.push(to_node);
-    }
-}
-
-struct Node {
-    value: i32,
-    connections: RefCell<Vec<Rc<Node>>>,
-}
-
-impl Node {
-    fn new(value: i32) -> Self {
-        Self {
-            value,
-            connections: RefCell::new(vec![]),
-        }
-    }
-    fn count_conn(&self) -> i32 {
-        let count = self.connections.borrow().len();
-        count as i32
-    }
-}
 
 fn main() {
     let mut graph = Graph::new();
