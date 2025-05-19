@@ -110,6 +110,45 @@ fn rc_explore() {
     println!("count after c goes out of scope = {}", Rc::strong_count(&a));
 }
 
+mod cycle {
+    use std::{cell::RefCell, rc::Rc};
+
+    use self::List::{Cons, Nil};
+
+    #[derive(Debug)]
+    enum List {
+        Cons(i32, RefCell<Rc<List>>),
+        Nil,
+    }
+
+    impl List {
+        fn tail(&self) -> Option<&RefCell<Rc<List>>> {
+            match self {
+                Cons(_, item) => Some(item),
+                Nil => None,
+            }
+        }
+    }
+
+    pub fn ref_cycle() {
+        let a = Rc::new(Cons(5, RefCell::new(Rc::new(Nil))));
+        println!("a initial rc count = {}", Rc::strong_count(&a));
+        println!("a next item = {:?}", a.tail());
+
+        let b = Rc::new(Cons(10, RefCell::new(Rc::clone(&a))));
+        println!("a rc count after b creation = {}", Rc::strong_count(&a));
+        println!("b initial rc count = {}", Rc::strong_count(&b));
+        println!("b next item = {:?}", b.tail());
+
+        if let Some(link) = a.tail() {
+            *link.borrow_mut() = Rc::clone(&b);
+        }
+
+        println!("b rc count after changing a = {}", Rc::strong_count(&b));
+        println!("a rc count after changing a = {}", Rc::strong_count(&a));
+    }
+}
+
 fn main() {
     let b = Box::new(5); // heap stored val, dereferenced as normal
     println!("b = {b}");
@@ -122,4 +161,5 @@ fn main() {
     dref_coersion(&(*m)[..]); // explicit dereference!
     drop_me();
     rc_explore();
+    crate::cycle::ref_cycle();
 }
