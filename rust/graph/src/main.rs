@@ -1,3 +1,8 @@
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
+
 use ref_cycle::graph::{Graph, Node};
 
 // We use Box to allocate values on the Heap
@@ -15,7 +20,7 @@ use ref_cycle::graph::{Graph, Node};
 // is saying that you can hold multiple immutable references to a RefCell that you CAN mutate.
 // RefCell<Rc<i32>>, you wouldn't be able to modify the i32, but you could swap out the RC & double the RefCell
 
-fn main() {
+fn graph_example() {
     let mut graph = Graph::new();
     let first = Node::new(1);
     let first_idx = graph.add_node(first);
@@ -30,4 +35,25 @@ fn main() {
         graph.nodes[0].value,
         graph.nodes[0].count_conn()
     );
+}
+
+fn tree_example() {
+    use ref_cycle::tree::Node;
+    let leaf = Rc::new(Node {
+        value: 3,
+        children: RefCell::new(vec![]),
+        parent: RefCell::new(Weak::new()),
+    });
+    println!("leaf parent = {:?}", leaf.parent.borrow().upgrade());
+    let branch = Rc::new(Node {
+        value: 5,
+        parent: RefCell::new(Weak::new()),
+        children: RefCell::new(vec![Rc::clone(&leaf)]),
+    });
+    *leaf.parent.borrow_mut() = Rc::downgrade(&branch);
+}
+
+fn main() {
+    graph_example();
+    tree_example();
 }

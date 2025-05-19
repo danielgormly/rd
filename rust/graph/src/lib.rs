@@ -43,3 +43,17 @@ pub mod graph {
         }
     }
 }
+
+pub mod tree {
+    use std::{
+        cell::RefCell,
+        rc::{Rc, Weak},
+    };
+
+    #[derive(Debug)]
+    pub struct Node {
+        pub value: i32,
+        pub parent: RefCell<Weak<Node>>,
+        pub children: RefCell<Vec<Rc<Node>>>,
+    }
+}
