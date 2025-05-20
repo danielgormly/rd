@@ -228,6 +228,37 @@ fn concurrency6() {
     });
 }
 
+// 17.05
+fn future_trait() {
+    trpl::run(async {
+        let (tx, mut rx) = trpl::channel();
+        let tx1 = tx.clone();
+        let tx1_fut = pin!(async move {
+            let vals = vec![String::from("hi"), String::from("from")];
+
+            for val in vals {
+                tx1.send(val).unwrap();
+                trpl::sleep(Duration::from_millis(500)).await;
+            }
+        });
+        let tx_fut = pin!(async move {
+            let vals = vec![String::from("more"), String::from("messages")];
+
+            for val in vals {
+                tx.send(val).unwrap();
+                trpl::sleep(Duration::from_millis(500)).await;
+            }
+        });
+        let rx_fut = pin!(async {
+            while let Some(value) = rx.recv().await {
+                println!("Got: {value}");
+            }
+        });
+        let futures: Vec<Pin<&mut dyn Future<Output = ()>>> = vec![tx_fut, tx1_fut, rx_fut];
+        trpl::join_all(futures).await; // join_all expects futures items to all implement futures trait
+    });
+}
+
 fn main() {
-    concurrency6();
+    future_trait();
 }
