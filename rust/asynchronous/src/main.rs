@@ -1,5 +1,8 @@
 use std::{
+    cell::RefCell,
+    ops::DerefMut,
     pin::{Pin, pin},
+    rc::Rc,
     time::Duration,
 };
 
@@ -259,6 +262,25 @@ fn future_trait() {
     });
 }
 
+#[derive(Debug)]
+struct DumbStruct {
+    bork: Option<Rc<RefCell<DumbStruct>>>,
+}
+
+fn sub_shit() {}
+
+fn moving_shit_around() {
+    let rc = Rc::new(RefCell::new(DumbStruct { bork: None }));
+    {
+        let mut mut_rc = rc.borrow_mut();
+        mut_rc.bork = Some(rc.clone());
+    }
+    let borrowed = rc.borrow();
+    if let Some(value) = &borrowed.bork {
+        println!("{:?}", value.borrow()); // crashes due to recursion overflowing stack
+    }
+}
+
 fn main() {
-    future_trait();
+    moving_shit_around();
 }
