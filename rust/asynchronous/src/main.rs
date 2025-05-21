@@ -267,7 +267,9 @@ struct DumbStruct {
     bork: Option<Rc<RefCell<DumbStruct>>>,
 }
 
-fn sub_shit() {}
+fn sub_shit(bill: Rc<RefCell<DumbStruct>>) {
+    println!("{:?}", bill);
+}
 
 fn moving_shit_around() {
     let rc = Rc::new(RefCell::new(DumbStruct { bork: None }));
@@ -275,10 +277,11 @@ fn moving_shit_around() {
         let mut mut_rc = rc.borrow_mut();
         mut_rc.bork = Some(rc.clone());
     }
-    let borrowed = rc.borrow();
-    if let Some(value) = &borrowed.bork {
-        println!("{:?}", value.borrow()); // crashes due to recursion overflowing stack
-    }
+    sub_shit(rc);
+    // let borrowed = rc.borrow();
+    // if let Some(value) = &borrowed.bork {
+    //     println!("{:?}", value.borrow()); // crashes due to recursion overflowing stack
+    // }
 }
 
 fn main() {
