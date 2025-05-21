@@ -1,15 +1,49 @@
-pub trait Draw {
-    fn draw(&self);
+mod GUI {
+    pub trait Draw {
+        fn draw(&self);
+    }
+
+    pub struct Screen {
+        pub components: Vec<Box<dyn Draw>>,
+    }
+
+    impl Screen {
+        pub fn run(&self) {
+            for component in self.components.iter() {
+                component.draw();
+            }
+        }
+    }
+
+    pub struct Button {
+        pub width: u32,
+        pub height: u32,
+        pub label: String,
+    }
+
+    impl Draw for Button {
+        fn draw(&self) {
+            // code to actually draw a button
+        }
+    }
+
+    pub struct SelectBox {
+        pub width: u32,
+        pub height: u32,
+        pub options: Vec<String>,
+    }
+
+    impl Draw for SelectBox {
+        fn draw(&self) {
+            // code to draw select box
+        }
+    }
 }
 
-pub struct Screen {
-    pub components: Vec<Box<dyn Draw>>,
-}
-
-fn main() {
-    let screen = Screen {
+fn render() {
+    let screen = crate::GUI::Screen {
         components: vec![
-            Box::new(SelectBox {
+            Box::new(crate::GUI::SelectBox {
                 width: 75,
                 height: 10,
                 options: vec![
@@ -18,7 +52,7 @@ fn main() {
                     String::from("No"),
                 ],
             }),
-            Box::new(Button {
+            Box::new(crate::GUI::Button {
                 width: 50,
                 height: 10,
                 label: String::from("OK"),
@@ -27,34 +61,4 @@ fn main() {
     };
 }
 
-impl Screen {
-    pub fn run(&self) {
-        for component in self.components.iter() {
-            component.draw();
-        }
-    }
-}
-
-pub struct Button {
-    pub width: u32,
-    pub height: u32,
-    pub label: String,
-}
-
-impl Draw for Button {
-    fn draw(&self) {
-        // code to actually draw a button
-    }
-}
-
-struct SelectBox {
-    width: u32,
-    height: u32,
-    options: Vec<String>,
-}
-
-impl Draw for SelectBox {
-    fn draw(&self) {
-        // code to draw select box
-    }
-}
+fn main() {}
