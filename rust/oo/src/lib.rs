@@ -1,4 +1,4 @@
-pub mod GUI {
+pub mod gui {
     pub trait Draw {
         fn draw(&self);
     }
