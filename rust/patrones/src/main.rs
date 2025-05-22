@@ -1,6 +1,6 @@
 // Patterns and Matching
 
-fn complicated_conditional() {
+fn _complicated_conditional() {
     let favorite_colour: Option<&str> = None;
     let is_tuesday = false;
     let age: Result<u8, _> = "34".parse();
