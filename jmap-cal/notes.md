@@ -1,5 +1,7 @@
 # Notes on JMAP, specifically JMAP cal & contacts
 
+JSON Meta Application Protocol
+
 - Core protocol https://jmap.io/spec-core.html
 - Sharing https://jmap.io/spec-sharing.html
 - Quotas https://www.rfc-editor.org/rfc/rfc9425.html
@@ -7,34 +9,60 @@
 - Websocket protocol https://www.rfc-editor.org/rfc/rfc8887.html
 - Contacts https://jmap.io/spec-contacts.html
 
-## Core
-- Ensure I-JSON compatibility
-- id:
-- Date data type is a specific serialised form
-- Authentication is based on standard HTTP auth schemes https://www.iana.org/assignments/http-authschemes/
-- Multiple accounts! Accounts are collections of data (contacts, events etc), and a single user can access multiple accounts.
-- Server can advertise extensions in the capabilities object
+## 1.1 Type information & attributes
+- `server-set`, `immutable` and `default` attributes to be adhered to
 
-## JMAP Session Resource
-This is the first point of contact, it contains an `urn:ietf:params:jmap:core` object that contains file size/object qty limitations, accounts, the user's primary account, username, urls, state.
+## 1.2 `Id` data type
+- record ids are immutable
+- a `String` with maximum size of 255 octets, url & filename safe base64 alphabet (excluding `=`).
+- TODO: Some sequences should be avoided (see spec and confirm they do not break recommendations)
+- TODO: should id be truly GLOBALLY unique (seems absurd), or do we prefix a unique user identifier when sharing?
+- TODO: so what are the best solutions here besides UUID?
 
-For Airday, I could structure it like
-- auth: daniel@air.day
--- primaryaccount: airday:uuid:primary
--- calendar-2: airday:uuid:calendar-2
--- calendar-3: airday:uuid:calendar-3
+## 1.3 `Int` and `UnsignedInt Data Types`
+- Integer in the range of -2^52+1<=value<=2^53-1, the safe range of integers stored in a floating-point double (JSON `Number`)
+- TODO: FP Double type? Rust?
+- `UnsignedInt` = `Int`, same as above but at least 0
 
-or
+## `Date`, `UTCDate`
+- date-time format (https://datatracker.ietf.org/doc/rfc3339/)
+- Please see notes on normalisation
+- UTCDate = Date where the time-offset component MUST be Z
 
-- user: daniel@air.day
--- primaryaccount: airday:uuid:primary
--- shared: airday:uuid:public
+## 1.5 JSON
+- Internet JSON (I-JSON) is a strict subset of JSON, must be valid I-JSON (https://datatracker.ietf.org/doc/html/rfc7493)
 
-or... many other solutions. This is at the intersection of simple UX & sharing limitations. TBC.
+## 1.6 Terms
+- User: Someone accessing JMAP via their set of permissions
+- Accounts: A collection of data, multiple data types (mail, contacts, calendars), accountId is mandatory in most API calls.
+- Account != User, though primary accounts are common. Single set of credentials may provide access to multiple accounts (sharing, group mailbox). Data that violates JMAP data constraints (e.g. from a server error) may have to reissue account id and clients refetch all data from scratch.
+- Data types: Collection of named, typed properties
+- Record: Instance of a data typed
+- id of a record is immutable, server-assigned
 
-## Service autodiscovery
-- DNS_SRV or a .well-known can be used. In my case, this may be a good thing to have later on - but unsure how this works if auth is not standardised?
-- In my case, if there were more clients this could be advertised easily - basically it includes a link to the JMAP session resource on the domain name
+## 1.7 JMAP API Model
+- Authenticated user fetches `Session` object with server capabilities & data.
+- Method calls can be batched. Binary files use separate endpoint.
+
+## 1.8 Vendor-Specific Extensions
+Extra data types can be added to capabilities object identified by vendor-owned domain.
+
+# 2. The JMAP Session Resource
+- URL for the JMAP Session resource = first point of contact
+- Credentials required for the JMAP Session endpoint = HTTP authorisation (TODO: Add relevant spec)
+- See lib.rs for scaffolding of these resources
+
+## 2.2 Service autodiscovery
+- DNS SRV record _jmap.tcp.example.com that gives hostname and port i.e. air.day 443
+- DNS_SRV or a .well-known/jmap sesion should provide access to JMAP Session resource
+
+## 3. Structured Data exchange
+
+## 3.1 Making an API request
+- POST request to the API resource (defined in session.apiUrl)
+- application/json encoded
+
+## 3.2 The Invocation Data Type
 
 ## Req/response
 These are batched calls by default. Request level errors are well-defined. Method level errors may result in partial or complete failure with each documented. In subsequent methods on the same request, arguments can be referenced from results of the previous using an octothorpe (#). Re. concurrency, methods in a single call must be performed in succession, however, methods across calls may be interleaved.
