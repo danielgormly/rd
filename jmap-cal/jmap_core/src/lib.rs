@@ -47,6 +47,28 @@ struct Session {
     state: String, // a means of determining the server session state and if this needs to be refetched (like a version)
 }
 
+// aka. method call
+// https://datatracker.ietf.org/doc/html/rfc8620#section-3.3
+struct Invocation {
+    // JSON representation is a tuple
+    name: String,
+    arguments: Vec<String>,
+    method_call_id: String, // echoed back to correlate response
+}
+
+// https://datatracker.ietf.org/doc/html/rfc8620#section-3.3
+struct Request {
+    using: Vec<String>, // capabilities set (TODO: ENUM)
+    method_calls: Vec<Invocation>,
+    created_ids: HashMap<id, id>, // TODO: Describe process later
+}
+
+struct ResponseObject {
+    method_responses: Vec<Invocation>,
+    created_ids: HashMap<id, id>,
+    session_state: String,
+}
+
 // TODO: Recommended to set Cache-Control: no-cache, no-store, must-revalidate on the Session response
 
 pub fn add(left: u64, right: u64) -> u64 {

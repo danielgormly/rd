@@ -62,7 +62,12 @@ Extra data types can be added to capabilities object identified by vendor-owned 
 - POST request to the API resource (defined in session.apiUrl)
 - application/json encoded
 
-## 3.2 The Invocation Data Type
+## 3.5 Ommitting arguments
+- Ommitted fields with default values will be treated as though they have the default value (whose default is `null`)
+
+## 3.6 Errors
+Errors look like this: `urn:ietf:params:jmap:error:unknownCapability`
+
 
 ## Req/response
 These are batched calls by default. Request level errors are well-defined. Method level errors may result in partial or complete failure with each documented. In subsequent methods on the same request, arguments can be referenced from results of the previous using an octothorpe (#). Re. concurrency, methods in a single call must be performed in succession, however, methods across calls may be interleaved.
