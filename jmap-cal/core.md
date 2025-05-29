@@ -1,6 +1,4 @@
-# Notes on JMAP, specifically JMAP cal & contacts
-
-JSON Meta Application Protocol
+# JSON Meta Application Protocol Notes
 
 - Core protocol https://jmap.io/spec-core.html
 - Sharing https://jmap.io/spec-sharing.html
