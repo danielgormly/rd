@@ -66,11 +66,76 @@ Extra data types can be added to capabilities object identified by vendor-owned 
 - Ommitted fields with default values will be treated as though they have the default value (whose default is `null`)
 
 ## 3.6 Errors
+- Three levels of granularity
+- 1. Request level (rate limited, malformed JSON etc)
+- 2. Methods may fail individually
+- 3. A record change within a method may fail individually (SetError)
 Errors look like this: `urn:ietf:params:jmap:error:unknownCapability`
 
+## 3.6.1 Request level Errors
+- Refer back to docs
 
-## Req/response
-These are batched calls by default. Request level errors are well-defined. Method level errors may result in partial or complete failure with each documented. In subsequent methods on the same request, arguments can be referenced from results of the previous using an octothorpe (#). Re. concurrency, methods in a single call must be performed in succession, however, methods across calls may be interleaved.
+## 3.6.2 Method-level Error
+tuple style like:
+```json
+[ "error", {
+  "type": "unknownMethod"
+}, "call-id"]
+```
 
-## Language
-In the HTTP headers we may have Accept-Language: fr-CH, fr;q=0.9, de;q=0.8, en;q=0.7, *;q=0.5. This is to be respected when sending error messages back etc.
+## 3.7. References to Previous Method Results
+Use "#" to get result from item in same request:
+```JSON
+[[ "Foo/changes", {
+    "accountId": "A1",
+    "sinceState": "abcdef"
+}, "t0" ],
+[ "Foo/get", {
+    "accountId": "A1",
+    "#ids": {
+        "resultOf": "t0",
+        "name": "Foo/changes",
+        "path": "/created"
+    }
+}, "t1" ]]
+```
+
+So the server needs to be able to evaluate these `ResultReferences` (marked with #)
+
+## 3.8. Localisation of User-Visible Strings
+See spec - use standard HTTP Accept-Language headers
+
+## 3.9 Security
+Be strict
+
+## 3.10 Concurrency
+Methods in same request are excuted in order, however, different requests may interleave.
+
+## 4. The core/echo Method
+Useful for testing - pings back method as sent (good starting place!)
+
+## 5. Standard Methods and Naming Convention
+- `Foo/get`: accountId, ids, properties = gets specified records
+- `Foo/changes`: accountId, sinceState, maxChanges = gets changes since defined state
+- `Foo/set`: accountId, ifInState, create, update
+- `Foo/destroy`: ID[]|nul
+- Methods are atomic units and must not be partially committed.
+- SetError may occur here if there's a data level or method level reissue
+- `Foo/copy`: Moves values between different accounts (`fromAccountId`, `ifFromInState`, `accountId` etc)
+- `Foo/query`: Get lots of items
+- `Foo/queryChanges` - get query but limited by updates since prev state
+- See examples in 5.7
+
+## 6. Binary data
+Nothing crazy interesting here
+
+## 7. Push (TBC... I will websocket at first)
+- You need to register a push subscription to which you will receive state updates - like literally the state string and on which account + data
+
+## 8.2 Authentication Scheme
+See https://www.iana.org/assignments/http-authschemes/
+
+## 8.3 Service Autodiscovery
+SRV DNS must be secured with DNSSEC
+
+## 8.4. JSON Parsing
