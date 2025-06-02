@@ -16,6 +16,7 @@ async fn main() {
 
     loop {
         let (socket, _) = listener.accept().await.unwrap();
+        let db = db.clone();
         tokio::spawn(async move {
             process(socket, db).await;
         });
@@ -35,7 +36,7 @@ async fn process(socket: TcpStream, db: Db) {
                 Frame::Simple("OK".to_string())
             }
             Get(cmd) => {
-                let mut db = db.lock().unwrap();
+                let db = db.lock().unwrap();
                 if let Some(value) = db.get(cmd.key()) {
                     Frame::Bulk(value.clone())
                 } else {
