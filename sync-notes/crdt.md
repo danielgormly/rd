@@ -74,3 +74,9 @@ G-Counter (grow-only counter) - dead simple, great for understanding the semilat
 PN-Counter (increment/decrement) - shows how to handle non-monotonic ops in state-based
 OR-Set (observed-remove set) - classic example of using tags/metadata to handle deletions
 LWW-Register (last-writer-wins) - introduces timestamps and conflict resolution
+
+
+- Continue from https://www.youtube.com/watch?v=oyUHd894w18 (26min, operation based)
+- https://www.youtube.com/watch?v=OOlnp2bZVRs
+- klepper's talk 1 https://www.youtube.com/watch?v=B5NULPSiOGw
+- klepper's talk 2 https://www.youtube.com/watch?v=x7drE24geUw
