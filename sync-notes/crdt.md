@@ -45,3 +45,32 @@ Order don't matter :) Different local updates to different replicas, they may di
 ## STRONG Eventual Consistency (a subset of eventual consistency)
 Same idea as eventual consistency, but you have a deterministic outcome for any conflict, during merge on any node. Consensus is on the node, deterministic, local, simple (thus fast)! Partition tolerance yes. Consistency yes. Solves the CAP theorem. Same definition as eventual consistency with a further guarantee:
 - Convergence: Correct replicas that have executed the same updates have equivalent state!
+
+## State-based synchronisation
+Sends full state & merge with foreign state!
+- Local queries, local updates
+- Send full state; on receive, merge
+- Conceptually simple
+- File systems (NFS, Unison, Dynamo)
+- monotonic! cannot shrink, grow only!
+- Self-healing (recover from lost messages)
+- Easier debugging!
+
+## Operation-based synchronisation
+Maintains updates, receives updates, plays back updates together to form whole.
+- Local queries
+- Replicated updates
+- Log, send operations
+- Reconcile non-commutative operations
+- Vector clock: static network
+- Collaborative editing, Bayou, PNUTS
+- Can be non-monotonic
+- Smaller message
+- Richer semantics - can model invariants, constraints
+- Causal delivery handles state comparison
+
+## TODO: Implement the following in rust
+G-Counter (grow-only counter) - dead simple, great for understanding the semilattice structure (as above)
+PN-Counter (increment/decrement) - shows how to handle non-monotonic ops in state-based
+OR-Set (observed-remove set) - classic example of using tags/metadata to handle deletions
+LWW-Register (last-writer-wins) - introduces timestamps and conflict resolution
