@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 
+#[derive(Debug, Clone)]
 pub struct PNCounter {
     pub replica_id: String,
     pub pos_state: HashMap<String, i32>,
@@ -107,5 +108,69 @@ mod tests {
     fn test_decrement_negative_panics() {
         let mut counter = PNCounter::new("replica1");
         counter.decrement(-1);
+    }
+    #[test]
+    fn test_merge_behavior() {
+        let mut counter_a = PNCounter::new("replica-a");
+        let mut counter_b = PNCounter::new("replica-b");
+
+        counter_a.increment(10);
+        counter_a.decrement(3); // A: +10, -3 = 7
+
+        counter_b.increment(5);
+        counter_b.decrement(8); // B: +5, -8 = -3
+
+        counter_a.merge(&counter_b);
+        assert_eq!(counter_a.value(), 4); // (10+5) - (3+8) = 4
+
+        // Test idempotency
+        counter_a.merge(&counter_b);
+        assert_eq!(counter_a.value(), 4); // Should remain 4
+    }
+
+    #[test]
+    fn test_concurrent_operations() {
+        let mut replica_a = PNCounter::new("a");
+        let mut replica_b = PNCounter::new("b");
+
+        // Simulate concurrent operations
+        replica_a.increment(7);
+        replica_b.decrement(2);
+
+        // Both replicas merge
+        replica_a.merge(&replica_b);
+        replica_b.merge(&replica_a);
+
+        // Should converge to same value
+        assert_eq!(replica_a.value(), 5); // 7 - 2
+        assert_eq!(replica_b.value(), 5); // Should be identical
+    }
+
+    #[test]
+    fn test_commutativity() {
+        let mut counter_a1 = PNCounter::new("a");
+        let mut counter_b1 = PNCounter::new("b");
+        let mut counter_c1 = PNCounter::new("c");
+
+        counter_a1.increment(3);
+        counter_b1.decrement(2);
+        counter_c1.increment(5);
+
+        // Create copies for reverse merge order
+        let mut counter_a2 = counter_a1.clone();
+        let mut counter_b2 = counter_b1.clone();
+        let mut counter_c2 = counter_c1.clone();
+
+        // Forward: A ← B ← C
+        counter_a1.merge(&counter_b1);
+        counter_a1.merge(&counter_c1);
+
+        // Reverse: A ← C ← B
+        counter_a2.merge(&counter_c2);
+        counter_a2.merge(&counter_b2);
+
+        assert_eq!(counter_a1.value(), counter_a2.value());
+        assert_eq!(counter_a1.pos_state, counter_a2.pos_state);
+        assert_eq!(counter_a1.neg_state, counter_a2.neg_state);
     }
 }
