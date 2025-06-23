@@ -8,7 +8,6 @@
 - https://github.com/ljwagerfield/crdt
 - https://github.com/pfrazee/crdt_notes
 - https://dl.acm.org/doi/pdf/10.1145/3380787.3393677
-- https://blog.jtfmumm.com//2015/11/17/crdt-primer-1-defanging-order-theory/
 - https://www.inkandswitch.com/
 - https://github.com/serenity-kit/secsync
 - https://jakelazaroff.com/words/an-interactive-intro-to-crdts/
