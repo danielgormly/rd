@@ -5,7 +5,7 @@ System timestamp is not monotonic - they can go backwards as they run fast & the
 
 A lamport clock is a shared clock maintained by the server, which increments on server write. The causal chain of requests are maintained. It is like a common tick.
 
-Using lamport clock alone for LWW is not a great idea, because while causal order is preserved, a lamport tick on concurrent individual clients can be the same, so a lamport clock lww still requires server-authoritative or other consensus to break a tie.
+Using lamport clock alone for LWW is not a great idea, because while causal order is preserved, a lamport tick on concurrent individual clients can be the same, so a lamport clock lww still requires server-authoritative or other consensus to break a tie. In a distributed system, it's very useful.
 
 ```rust
 struct LamportClock {
@@ -29,3 +29,8 @@ impl LamportClock {
 
 ## Hybrid logical clocks
 We could use wall clock (approx, client local time) + tick (local client tie breaker) + pid (inter-client tie breaker) as the basis of our LWW-Register implementation. This is a good enough, simple solution for high-trust environments.
+
+## Vector clocks
+Vector clocks { bob: 3, bill: 7 } in a CRDT provide a more complete causal chain that shows each process's last known version number at every point in time (noting that "time" is logical and relative for each process). This allows precision in detecting concurrency and an opportunity to allow users to decide how to merge events. It also affords the opportunity to preserve a complete history of all events taken place.
+
+Obviously, this suffers from a growth problem so should be used wisely.
