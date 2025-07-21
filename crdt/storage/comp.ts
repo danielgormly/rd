@@ -85,7 +85,7 @@ function jsonStrategy() {
       workspace_id UUID NOT NULL,
       id UUID NOT NULL PRIMARY KEY,
       -- dynamic vals
-      attributes TEXT NOT NULL DEFAULT '{}',
+      attributes TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(attributes) AND json_type(attributes) = 'object'),
       updated_utc TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );`);
 
