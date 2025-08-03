@@ -1,2 +1,9 @@
 node_modules
 /target
+# LaTeX/vimlatex
+*.pdf
+*.aux
+*.fdb_latexmk  
+*.fls
+*.log
+*.synctex.gz
