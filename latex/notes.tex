@@ -1,0 +1,95 @@
+\documentclass{article}
+
+\author{Daniel Gormly}
+\title{LaTeX Notes}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+This follows the `Not So Short Introduction to LaTeX.'\footnote{Available at: \texttt{https://tobi.oetiker.ch/lshort/lshort.pdf}}
+\end{abstract}
+
+\subsection{TeX}
+
+TeX (pronounced "tech") is a a computational typesetting system from Donald Knuth, released in 1978. He wrote the Art of Computer Programming and was pissed about the typesetting in a newer version with digital printing, so he set out to fix it.
+
+Donald's version is still maintained but has been "completed" for many years. TeX originally provided output files directly for consumption by printers. As screen resolution increased, the pdfTeX engine was created to provide screen output. LuaTeX and XeTeX engines are now the dominant engines, licensed freely to extend TeX.
+
+\subsection{LaTeX}
+
+LaTeX is a collection of macros leveraging TeX. It was developed by Leslie Lamport, the Lamport Timestamp guy, for his personal use. LaTeX went through 3 major versions. LaTeX3 and LaTeX are equivalent.
+
+\subsection{A note on tools for publishing}
+It is more common in less technical publications to use InDesign, Affinity Publisher etc. For technical publications, LaTeX gives you sound structure and tooling.
+
+Typst is a new alternative to LaTeX built be smoother and eaasier to grasp. I have read mostly good experiences.
+
+\subsection{Distributions}
+LaTeX ususally comes in an ecosystem with an engine, multiple packages, viewers, even package managers. There's MacTeX for Mac, LiveTeX for Linux and probably a bunch of others. These are the two that seem like path of least-resistence.
+
+\subsection{Web versions}
+MathJax and KaTeX are used to display front-end LaTeX snippets (and MathML - a markdown language for mathematical notation).
+
+\subsection{Packages}
+CTAN is the website containing a huge amount of LaTeX packages. tlmgr is the native TeXLive package manager from which you can install these packages. \textbackslash usepackage command is how to bring them into your doc. The beamer package will build you a crap presentation. booktabs will build you a table. makeidx will make an index. fancyhdr will give you fancy headers \& footers.
+
+\subsection{Files}
+TeX uses plain text files. \texttt{.tex} is the commonly used extension. There are a bunch of other files like \texttt{.fd} (fonts), \texttt{.sty} (macro commands) etc. Again there are a bunch of auxiliary files as you compile \texttt{.tex} files including \texttt{.log} files (compiler logs), \texttt{.toc} (section headers), \texttt{.lof} (headers) etc.
+
+\section{LaTeX markup}
+Repeated spaces are condensed into one space, repeated lines condensed into one line. Comments are achieved with a \% character. There are a bunch of other special chars. Escape them with a \textbackslash, except for backslash itself where you literally have to write out \textbackslash textbackslash.
+
+LaTeX commands contain a \textbackslash followed by an argument, you need to put arguments in braces i.e. \{\} if you want to treat them like a single argument.
+
+The documentclass cmd takes `article', `report', `book' and a bunch of other things. Use a a `begin'/`end' pair to start and end the doc. What about \emph{this one} huh? You'll have to check the source.
+
+\begin{em}
+We can write whole paragraphs like this using environments, delimited with begin and end.
+\end{em}
+
+\pagebreak
+
+\section{Real world LaTeX}
+
+Good work soldier, you just did a page break. \\[3em] Now let's push this line down 3em.\\Great job. Oh fuk you just did it in the middle of a paragraph. If you try a mid-line linebreak and LaTeX can't make it nice, it will cook it and hit you with an hbox warning. the \texttt{sloppy} command overrides this slightly by evenly spacing the words.
+
+\hyphenation{hyph-enated}
+
+\texttt{hyphenation} command lets you specify exactly which words can be hyphenated, if at all, and exactly at which point. (See above in source).
+
+\today\space is the print date! \TeX\space prints that terrible name. \LaTeX is even worse. \LaTeXe is still slightly worse.
+
+You've done a \textbackslash\space now let's do a \slash. and this\ldots.
+
+LaTex deals with other languages y aunque sí puedo hablar español no voy a leer todo el libro porque no hay tiempo! Me parece bien así sin el biblioteca que se llama `polyglossia'.
+
+You can make new commands in a document with the \texttt{\textbackslash NewDocumentCommand\{\}\{\}} You can define arguments in the first part and the function in the second.
+
+\begin{enumerate}
+\item a list
+\item of 2 items
+\item[-] well 3 but one with a dash
+\end{enumerate}
+
+\begin{center} let's center this \end{center}
+\begin{flushright} and align this to the right \end{flushright}
+
+\texttt{csquotes} package can provide you with quotes.
+
+\verb|\verb| is another way of quoting code (esp instead of running the command). The verbatim package allows you to bring in an entire file and print it verbatim with the \verb|\verbatim| command. The \verb|listings| package gets fancier, allowing you to show line numbers, control indents etc. Minted goes a step further and brings colour etc.
+
+Here is how to make a basic table, noting that booktabs goes much further:
+
+\begin{tabular}{lcr}
+left & centre & right \\
+1 & 2 & 3 \\
+\end{tabular}
+
+The graphicx packages lets you bring in images.
+
+\section{Typesetting Mathematical
+Formulae}
+
+Ok now for the real shit
+
+\end{document}
