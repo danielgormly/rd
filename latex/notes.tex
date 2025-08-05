@@ -1,5 +1,8 @@
 \documentclass{article}
 
+\usepackage{mathtools}
+\usepackage{unicode-math}
+
 \author{Daniel Gormly}
 \title{LaTeX Notes}
 
@@ -28,7 +31,7 @@ Typst is a new alternative to LaTeX built be smoother and eaasier to grasp. I ha
 LaTeX ususally comes in an ecosystem with an engine, multiple packages, viewers, even package managers. There's MacTeX for Mac, LiveTeX for Linux and probably a bunch of others. These are the two that seem like path of least-resistence.
 
 \subsection{Web versions}
-MathJax and KaTeX are used to display front-end LaTeX snippets (and MathML - a markdown language for mathematical notation).
+MathJax and KaTeX are used to display front-end LaTeX snippets. MathML is another markdown language that can be fed or exported from some of these systems.
 
 \subsection{Packages}
 CTAN is the website containing a huge amount of LaTeX packages. tlmgr is the native TeXLive package manager from which you can install these packages. \textbackslash usepackage command is how to bring them into your doc. The beamer package will build you a crap presentation. booktabs will build you a table. makeidx will make an index. fancyhdr will give you fancy headers \& footers.
@@ -90,6 +93,6 @@ The graphicx packages lets you bring in images.
 \section{Typesetting Mathematical
 Formulae}
 
-Ok now for the real shit
+\verb|mathtools| includes \AmS-\TeX and \AmS-\LaTeX \ - note I've included this package up top. AMS = American Mathematical Society. \verb|unicode-math| package adds unicode fonts.
 
 \end{document}
