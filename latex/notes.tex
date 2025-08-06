@@ -1,7 +1,10 @@
 \documentclass{article}
 
 \usepackage{mathtools}
-\usepackage{unicode-math}
+\usepackage[
+math-style=ISO,
+warnings-off={mathtools-colon, mathtools-overbracket},
+]{unicode-math}
 
 \author{Daniel Gormly}
 \title{LaTeX Notes}
@@ -94,5 +97,84 @@ The graphicx packages lets you bring in images.
 Formulae}
 
 \verb|mathtools| includes \AmS-\TeX and \AmS-\LaTeX \ - note I've included this package up top. AMS = American Mathematical Society. \verb|unicode-math| package adds unicode fonts.
+
+Inline formula like this \(1 + 1\) and not like the following: \[3 + 3\]
+
+Example of a reference
+
+\begin{equation}
+\label{trivial}
+2 + 2
+\end{equation}
+
+notice it puts a reference (1) next to it, and we can refer back to it with \ref{trivial}
+
+\begin{equation}
+\label{multiplication}
+\tag{simple equation}
+3 \times 4
+\end{equation}
+
+we can also use tags which gives the equation a text label, which can be referred back to with \verb|\eqref| e.g. \eqref{multiplication}
+
+Math mode is distinct from text mode and is entered with \verb|begin{equation}|, \verb|begin{equation}|. \(1 2 3 4\) - white space is ignored in maths mode. Taking line breaks is not allowed. Text characters are treated as \(variables\). So you have to use the \verb|\text| command like so to print text within an equation to print text: \( \text1+ 1 = \text{two}\). You can also \(2^2\) here but not outside.
+
+\subsection{Basic math building block examples:}
+
+\((4 \times 6) \div 3 = 8 \)
+
+\(2^2 + 2^2 \times 2_{4 \times 2}\)
+
+\((5 \cdot 3) \divslash 2 \not= 7\)
+
+\(1 \leq 2\) vs \( 1 \leqslant 2\)
+
+\(a^2\) or \({a^2}^2\)
+
+\(\sqrt{a} + \sqrt{b} = \sqrt{c}\)
+
+\(sqrt[7]{4 \times 4}\)
+
+\(\frac{6}{3}\)
+
+\[\frac{\sqrt{a}}{6 \times 3_a} \leqslant 3\]
+
+\begin{equation}
+p \land q \iff \lnot  (p \implies \lnot q
+\end{equation}
+\textit{p \& q only if not (p implies not q)}
+
+\[ \lnot\forall_{q} P(q) \iff \exists_{q}\lnot P(q)\]
+
+\(\{3,4, \ldots, 100\}\)
+
+\begin{equation}
+\alpha, \beta, \gamma, \epsilon, \Epsilon, \pi, \kappa, \varkappa
+\end{equation}
+\textit{Greek letters}
+
+\begin{equation}
+\symbb{P} \symbb{p} \symbb{N}
+\end{equation}
+\textit{blackboard bold or double struck for set names}
+
+\[ \symbfit{Hello}\]
+
+\[ \symbffrak{How are you?}\]
+
+Some trig: \(\sin(3) \times \cos(3)\)
+
+\begin{equation}
+\sum_{k=0}^{n} \frac{1}{k^2}
+\end{equation}
+\textit{sigma}
+
+\begin{multline}
+a + b + c + d + e
++ f + g + h + i \\
+= j + k + l + m + n
+\end{multline}
+
+
 
 \end{document}
