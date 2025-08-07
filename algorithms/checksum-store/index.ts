@@ -35,7 +35,6 @@ enum NodeType {
 class ChecksumNode {
   type: NodeType;
   parent?: ChecksumNode;
-  children: ChecksumNode[] = [];
   index: ChecksumStore;
   value: number;
   constructor(index: ChecksumStore, value: number) {
@@ -46,10 +45,14 @@ class ChecksumNode {
 
 class YearNode extends ChecksumNode {
   type = NodeType.Year;
+  checksum?: number;
+  children = new Set<MonthNode>();
 }
 
 class MonthNode extends ChecksumNode {
   type = NodeType.Month;
+  checksum?: number;
+  children = new Set<DayNode>();
   setParent(yearNode: YearNode) {
     this.parent = yearNode;
   }
