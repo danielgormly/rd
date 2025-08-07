@@ -24,14 +24,6 @@ const yearLike = 50_000_000_000; // 365 * 24 * 3600 * 1000 (nearest {5,1}x10^x) 
 // Merkle/checksum tree shines in this context, answering the question: what is missing or what is corrupt efficiently
 // in any case - we need to keep track of windows of items, a count, and a check of how timestamps
 
-async function sha256(text: string) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 class ChecksumTree {
   // TODO: EVERY item with this the finest hash granularity needs to stay here (perhaps an idb/sqlite index is needed - based on server timestamp)
   // TODO: A rebuild could be put in a worker
@@ -61,17 +53,43 @@ class ChecksumTree {
     this.daysTouched.add(dayBucket);
   }
   commit() {
-    let monthsTouched = new Set<number>();
-    let yearsTouched = new Set<number>();
+    let months = new Map<number, number>();
+    let years = new Map<number, number>();
     // Calculate checksum for each month
     this.daysTouched.forEach((dayMs) => {
+      const year = Math.floor(dayMs / yearLike);
       const month = Math.floor(dayMs / monthLike);
       const dayChecksum = this.days.get(dayMs);
-      // xor all checksums for months
-      // then xor all checksums for years
+      if (typeof dayChecksum !== "number") {
+        throw new Error("Checksum tree failed. dayChecksum not found.");
+      }
+      // Update month check sum
+      const monthChecksum = months.get(month);
+      months.set(month, dayChecksum ^ (monthChecksum || 0));
+      // Update year checksum
+      const yearChecksum = years.get(year);
+      years.set(year, dayChecksum ^ (yearChecksum || 0));
     });
-    // Calculate checksum for each month
-    // Calculate checksums for each year
-    // return checksum (serialise in app to idb)
+    for (let entry of months.entries()) {
+      this.months.set(entry[0], entry[1]);
+    }
+    for (let entry of years.entries()) {
+      this.years.set(entry[0], entry[1]);
+    }
   }
 }
+
+const tree = new ChecksumTree();
+// const randomDays = Math.random() * 1000 * 1000 * 60 * 60 * 24;
+for (let i = 0; i < 100; i++) {
+  const usecArr: number[] = [];
+  const day = Date.now() - i * 1000 * 60 * 60 * 24;
+  const dayBucket = Math.floor(day / dayLike);
+  for (let i = 0; i < 100; i++) {
+    const usecRand = Math.floor(day * 1000 - Math.random() * 1000 * 1000);
+    usecArr.push(usecRand);
+  }
+  tree.insertDay(dayBucket, usecArr);
+}
+tree.commit();
+console.log(tree);
