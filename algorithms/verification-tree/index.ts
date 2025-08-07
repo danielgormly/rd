@@ -41,7 +41,10 @@ class ChecksumTree {
   months = new Map<number, number>();
   days = new Map<number, number>(); // day, checksum of microsecond timestamps
   // Expects every entry for that day, and validates that they are for that day!
-  insertTimestamps(dayBucket: number, usecs: [number]) {
+  clearDay(dayBucket: number) {
+    this.insertDay(dayBucket, []);
+  }
+  insertDay(dayBucket: number, usecs: number[]) {
     const daysTouched: number[] = [];
     const checksum = usecs.reduce((xor, usec) => {
       const ms = usec / 1000;
@@ -58,11 +61,17 @@ class ChecksumTree {
     this.daysTouched.add(dayBucket);
   }
   commit() {
+    let monthsTouched = new Set<number>();
+    let yearsTouched = new Set<number>();
+    // Calculate checksum for each month
     this.daysTouched.forEach((dayMs) => {
+      const month = Math.floor(dayMs / monthLike);
       const dayChecksum = this.days.get(dayMs);
       // xor all checksums for months
       // then xor all checksums for years
     });
+    // Calculate checksum for each month
+    // Calculate checksums for each year
     // return checksum (serialise in app to idb)
   }
 }
