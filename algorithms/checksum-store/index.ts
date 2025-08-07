@@ -25,16 +25,50 @@ const yearLike = 50_000_000_000; // 365 * 24 * 3600 * 1000 (nearest {5,1}x10^x) 
 // in any case - we need to keep track of windows of items, a count, and a check of how timestamps
 
 // TODO: Full rebuilds could be put in a worker
-class ChecksumTree {
+
+enum NodeType {
+  Day,
+  Month,
+  Year,
+}
+
+class ChecksumNode {
+  type: NodeType;
+  parent?: ChecksumNode;
+  children: ChecksumNode[] = [];
+  index: ChecksumStore;
+  value: number;
+  constructor(index: ChecksumStore, value: number) {
+    this.index = index;
+    this.value = value;
+  }
+}
+
+class YearNode extends ChecksumNode {
+  type = NodeType.Year;
+}
+
+class MonthNode extends ChecksumNode {
+  type = NodeType.Month;
+  setParent(yearNode: YearNode) {
+    this.parent = yearNode;
+  }
+}
+
+class DayNode extends ChecksumNode {
+  type = NodeType.Day;
+  setParent(monthNode: MonthNode) {
+    this.parent = monthNode;
+  }
+}
+
+class ChecksumStore {
   // Pending changes
   daysTouched = new Set<number>();
-  // Values <absolute start date of period, checksums>
-  years = new Map<number, number>();
-  months = new Map<number, number>();
+  // Base values <absolute start date of period, checksums>
   days = new Map<number, number>();
-  // Cached relationships
-  monthDays = new Map<number, Set<number>>();
-  yearMonths = new Map<number, Set<number>>();
+  // Multi-level index
+  years = new Map<number, YearNode>();
   clearDay(dayBucket: number) {
     this.insertDay(dayBucket, []);
   }
@@ -49,7 +83,7 @@ class ChecksumTree {
       const day = Math.floor(ms / dayLike) * dayLike;
       if (day !== dayBucket) {
         throw new Error(
-          `${usec} does not belong in day bucket in checksum tree`,
+          `${usec} does not belong in day bucket in checksum index`,
         );
       }
       daysTouched.push(day);
@@ -59,32 +93,22 @@ class ChecksumTree {
     this.daysTouched.add(dayBucket);
   }
   commit() {
-    let months = new Map<number, number>();
-    let years = new Map<number, number>();
+    let monthsTouched = new Set<number>();
+    let yearsTouched = new Set<number>();
     // Calculate checksum for each month
     this.daysTouched.forEach((dayMs) => {
-      const year = Math.floor(dayMs / yearLike) * yearLike;
       const month = Math.floor(dayMs / monthLike) * monthLike;
-      const dayChecksum = this.days.get(dayMs);
-      if (typeof dayChecksum !== "number") {
-        throw new Error("Checksum tree failed. dayChecksum not found.");
-      }
-      // Update month check sum
-      const monthChecksum = months.get(month);
-      months.set(month, dayChecksum ^ (monthChecksum || 0));
-      // Update year checksum
-      const yearChecksum = years.get(year);
-      years.set(year, dayChecksum ^ (yearChecksum || 0));
-      // Update relationships
-      if (!this.monthDays.has(month)) {
-        this.monthDays.set(month, new Set());
-      }
-      this.monthDays.get(month)!.add(dayMs);
-      if (!this.yearMonths.has(year)) {
-        this.yearMonths.set(year, new Set());
-      }
-      this.yearMonths.get(year)!.add(month);
+      monthsTouched.add(month);
     });
+    monthsTouched.forEach((month) => {
+      const year = Math.floor(month / yearLike) & yearLike;
+      yearsTouched.add(year);
+    });
+
+    // const dayChecksum = this.days.get(dayMs);
+    // if (typeof dayChecksum !== "number") {
+    //   throw new Error("Checksum tree failed. dayChecksum not found.");
+    // }
     // Update months & years
     for (let entry of months.entries()) {
       this.months.set(entry[0], entry[1]);
@@ -94,9 +118,19 @@ class ChecksumTree {
     }
     this.daysTouched.clear();
   }
+  updateChecksumsMonth(months: number[]) {
+    for (let month of months) {
+      // Update month check sum
+      const monthChecksum = months.get(month);
+      months.set(month, dayChecksum ^ (monthChecksum || 0));
+    }
+    // Update year checksum
+    const yearChecksum = years.get(year);
+    years.set(year, dayChecksum ^ (yearChecksum || 0));
+  }
 }
 
-const tree = new ChecksumTree();
+const store = new ChecksumStore();
 
 // Testing a million items
 for (let i = 0; i < 1000; i++) {
@@ -107,7 +141,7 @@ for (let i = 0; i < 1000; i++) {
     const usecRand = Math.floor(day * 1000 - Math.random() * 1000 * 1000);
     usecArr.push(usecRand);
   }
-  tree.insertDay(dayBucket, usecArr);
+  store.insertDay(dayBucket, usecArr);
 }
-tree.commit();
-console.log(tree.monthDays);
+store.commit();
+console.log(store.years);
