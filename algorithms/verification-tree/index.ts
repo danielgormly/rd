@@ -59,8 +59,10 @@ class ChecksumTree {
   }
   commit() {
     this.daysTouched.forEach((dayMs) => {
-      // this.days.get();
+      const dayChecksum = this.days.get(dayMs);
+      // xor all checksums for months
+      // then xor all checksums for years
     });
-    // rebuild (and serialise) where days touched
+    // return checksum (serialise in app to idb)
   }
 }
