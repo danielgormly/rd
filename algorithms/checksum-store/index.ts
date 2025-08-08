@@ -24,7 +24,7 @@ const yearLike = 50_000_000_000; // 365 * 24 * 3600 * 1000 (nearest {5,1}x10^x) 
 // Merkle/checksum tree shines in this context, answering the question: what is missing or what is corrupt efficiently
 // in any case - we need to keep track of windows of items, a count, and a check of how timestamps
 
-// TODO: Full rebuilds could be put in a worker
+// TODO: Full rebuilds could be put in a worker...
 
 enum NodeType {
   Day,
@@ -34,7 +34,6 @@ enum NodeType {
 
 class ChecksumNode {
   type: NodeType;
-  parent?: ChecksumNode;
   store: ChecksumStore;
   index: number;
   checksum?: number;
@@ -52,9 +51,6 @@ class YearNode extends ChecksumNode {
 class MonthNode extends ChecksumNode {
   type = NodeType.Month;
   children = new Map<number, DayNode>();
-  setParent(yearNode: YearNode) {
-    this.parent = yearNode;
-  }
 }
 
 class DayNode extends ChecksumNode {
@@ -64,11 +60,9 @@ class DayNode extends ChecksumNode {
     super(store, index);
     this.checksum = checksum;
   }
-  setParent(monthNode: MonthNode) {
-    this.parent = monthNode;
-  }
 }
 
+// TODO: days + daysTouched could potentially be combined (where the whole object is full of non-committed days)
 class ChecksumStore {
   // Pending changes
   daysTouched = new Set<number>();
@@ -128,7 +122,7 @@ class ChecksumStore {
     monthsTouched.forEach((month) => {
       month.checksum = Array.from(month.children.values()).reduce(
         (xor, dayNode) => {
-          if (!dayNode.checksum) {
+          if (typeof dayNode.checksum !== "number") {
             console.log(dayNode);
             throw new Error("Missing day checksum");
           }
@@ -140,7 +134,8 @@ class ChecksumStore {
     yearsTouched.forEach((year) => {
       year.checksum = Array.from(year.children.values()).reduce(
         (xor, monthNode) => {
-          if (!monthNode.checksum) throw new Error("Missing month checksum");
+          if (typeof monthNode.checksum !== "number")
+            throw new Error("Missing month checksum");
           return xor ^ monthNode.checksum;
         },
         0,
@@ -153,16 +148,14 @@ class ChecksumStore {
 const store = new ChecksumStore();
 
 // Testing a million items
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 1000; i++) {
   const usecArr: number[] = [];
   const day = Date.now() - i * 1000 * 60 * 60 * 24;
   const dayBucket = Math.floor(day / dayLike) * dayLike;
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 1000; i++) {
     const usecRand = Math.floor(day * 1000 - Math.random() * 1000 * 1000);
-    usecArr.push(usecRand);
     usecArr.push(usecRand);
   }
   store.insertDay(dayBucket, usecArr);
 }
 store.commit();
-// console.log(store.years);
