@@ -34,11 +34,9 @@ enum NodeType {
 
 class ChecksumNode {
   type: NodeType;
-  store: ChecksumStore;
   index: number;
   checksum?: number;
-  constructor(store: ChecksumStore, index: number) {
-    this.store = store;
+  constructor(index: number) {
     this.index = index;
   }
 }
@@ -56,8 +54,8 @@ class MonthNode extends ChecksumNode {
 class DayNode extends ChecksumNode {
   type = NodeType.Day;
   checksum: number;
-  constructor(store: ChecksumStore, index: number, checksum: number) {
-    super(store, index);
+  constructor(index: number, checksum: number) {
+    super(index);
     this.checksum = checksum;
   }
 }
@@ -65,44 +63,73 @@ class DayNode extends ChecksumNode {
 // TODO: days + daysTouched could potentially be combined (where the whole object is full of non-committed days)
 class ChecksumStore {
   // Pending changes
-  daysTouched = new Set<number>();
-  // Base values <absolute start date of period, checksums>
-  days = new Map<number, DayNode>(); // quick access (TODO: is this necessary...? think about usage patterns when done)
-  // Multi-level index
+  daysTouched = new Map<number, DayNode>(); // quick access (TODO: is this necessary...? think about usage patterns when done)
+  // Multi-level index - todo; maybe just make this a more traditional tree with this as the root node
   years = new Map<number, YearNode>();
-  clearDay(dayBucket: number) {
-    // TODO: Remove links, check month child lengths & year child lengths, removing where required (TODO: Could be placed within insertDay?)
-    this.insertDay(dayBucket, []);
+  reset = () => {
+    this.daysTouched = new Map<number, DayNode>();
+    this.years = new Map<number, YearNode>();
+  };
+  clearDay(dayMs: number) {
+    if (this.dirty) {
+      throw new Error("can't clear days while there are pending changes");
+    }
+    const result = this.getDay(dayMs);
+    if (result) {
+      result.monthNode.children.delete(dayMs);
+      if (!result.monthNode.children.size) {
+        result.yearNode.children.delete(result.monthNode.index);
+        if (!result.yearNode.children.size) {
+          this.years.delete(result.yearNode.index);
+        }
+      }
+    }
   }
-  dirty() {
+  getDay(dayMs: number) {
+    const month = Math.floor(dayMs / monthLike) * monthLike;
+    const year = Math.floor(dayMs / yearLike) * yearLike;
+    const yearNode = this.years.get(year);
+    if (yearNode) {
+      const monthNode = yearNode.children.get(month);
+      if (monthNode) {
+        const dayNode = monthNode.children.get(dayMs);
+        if (dayNode) {
+          return {
+            dayNode,
+            monthNode,
+            yearNode,
+          };
+        }
+      }
+    }
+    return false;
+  }
+  get dirty() {
     return this.daysTouched.size > 0;
   }
   // Expects every entry for that day, and validates that they are for that day!
-  insertDay(dayBucket: number, usecs: number[]) {
-    const daysTouched: number[] = [];
+  insertDay(dayMs: number, usecs: number[]) {
     const checksum = usecs.reduce((xor, usec) => {
       const ms = usec / 1000;
       const day = Math.floor(ms / dayLike) * dayLike;
-      if (day !== dayBucket) {
+      if (day !== dayMs) {
         throw new Error(
           `${usec} does not belong in day bucket in checksum index`,
         );
       }
-      daysTouched.push(day);
       return xor ^ usec;
     }, 0);
-    this.days.set(dayBucket, new DayNode(this, dayBucket, checksum));
-    this.daysTouched.add(dayBucket);
+    this.daysTouched.set(dayMs, new DayNode(dayMs, checksum));
   }
   commit() {
     let monthsTouched = new Set<MonthNode>();
     let yearsTouched = new Set<YearNode>();
     // Calculate checksum for each month
-    this.daysTouched.forEach((dayMs) => {
+    this.daysTouched.forEach((node, dayMs) => {
       // Set or get year
       const year = Math.floor(dayMs / yearLike) * yearLike;
       const yearEntry = this.years.get(year);
-      let yearNode = yearEntry || new YearNode(this, year);
+      let yearNode = yearEntry || new YearNode(year);
       if (!yearEntry) {
         this.years.set(year, yearNode);
       }
@@ -111,8 +138,8 @@ class ChecksumStore {
       // Set or get month
       const month = Math.floor(dayMs / monthLike) * monthLike;
       const monthEntry = yearNode.children.get(month);
-      const monthNode = monthEntry || new MonthNode(this, month);
-      monthNode.children.set(dayMs, this.days.get(dayMs)!);
+      const monthNode = monthEntry || new MonthNode(month);
+      monthNode.children.set(dayMs, this.daysTouched.get(dayMs)!);
       if (!monthEntry) {
         yearNode.children.set(month, monthNode);
       }
@@ -143,6 +170,9 @@ class ChecksumStore {
     });
     this.daysTouched.clear();
   }
+  diffYears() {}
+  diffMonths() {}
+  diffDays() {}
 }
 
 const store = new ChecksumStore();
