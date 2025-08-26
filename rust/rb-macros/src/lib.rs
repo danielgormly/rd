@@ -1,5 +1,3 @@
-use proc_macro;
-
 #[macro_export]
 macro_rules! simple_vec {
     ( $( $x:expr ),* ) => {
@@ -12,6 +10,3 @@ macro_rules! simple_vec {
         }
     };
 }
-
-#[some_attribute]
-pub fn some_name(input: TokenStream) -> TokenStream {}
