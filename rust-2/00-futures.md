@@ -27,16 +27,33 @@ pub enum Async<T> {
 The runtime that orchestrates asynchronous functions & structures. An naive executor might look like this:
 
 ```rust
-struct Executor;
+struct Executor(Arc<Mutex<Vec<bool>>>);
+
+struct MyNotifier(Mutex<Vec<bool>>);
+
+impl Notify for MyNotifier {
+    fn notify(&self, id: usize) {
+        self.0.lock()[id] = true;
+    }
+}
 
 impl Executor {
     fn run_all(&mut self, futures: Vec<Future>) -> Vec<Result<Future::Item, Future::Error>> {
         let mut done = 0;
         let mut results = Vec::with_capacity(futures.len());
+        let nf = Arc::new(MyNotifier(Mutex::new(vec![true; futures.len()])));
+        let notifier = NotifyHandle::new(nf);
 
         while done != futures.len() {
             for (i, f) in futures.iter_mut().enumerate() {
-                match f.poll() { // poll() should never block!
+                // Don't pull futures that can't make progress
+                let was_notified = self.0.lock();
+                if !was_notified[i] {
+                    continue;
+                }
+                was_notified[i] = false;
+                // Noticed poll() is called within a closure, and a notifier for the entire executor + a particular id is given
+                match executor::with_notify(&notifier, i, || f.poll()) {
                     Ok(Async::Ready(t)) => {
                         // Problem 1: We are going to call pole after it's done
                         results.push(i, Ok(t));
@@ -47,12 +64,32 @@ impl Executor {
                         done += 1;
                     }
                     Ok(Async::NotReady) => {
-                        // Problem 1: We are going to loop on this indefinitely at an unbounded rate
+                        // meanwhile, thread T notices that a network packet arrived
+                        // f *must* have arranged for tasks[i] (its task) to be notified later
                         continue;
                     }
                 }
             }
         }
+        // wait for Task::notify to be called
     }
 }
 ```
+
+## Poll
+Queries a future to see if its value has become available, registering interest if not. Poll should never block!
+
+task::park retrieves a handle to the current Task. task::unpark is called when the future is ready to make progress.
+
+## Task
+`futures::task:current` - poll can use this to get a handle to the current executor. Tasks can be sent around to other threads etc, and eventually when the Task can progress, that thread can call "notify" on the task to intimate that you may be able to make progress.
+
+Struct futures::task::Task
+```rust
+pub struct Task {};
+pub fn notify(&self);
+pub fn is_current(&self) -> bool;
+```
+
+## Tokio
+Above we saw the types Rust provides a common interface detailing for async/await operations, but it does not actually provide an implementation. This is where tokio comes in; event-driven, non-blocking I/O platform.
