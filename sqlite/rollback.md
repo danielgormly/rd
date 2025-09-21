@@ -55,3 +55,21 @@ tl;dr:
 10. Exclusive lock released.
 
 ## Rollbacks
+Rollbacks are pretty simple conceptually, if the journal is there and hot, roll it back, flush and delte the journal.
+
+## Multi-file commit
+This section explains multi-file commits. This is beyond my present interests.
+
+## Additional details of the commit process
+- All other pages within a sector must be stored in the rollback journal to avoid potential corruption. The entirety of all affected sectors need to be considered as suspect - this would appear to be hardware level concerns.
+
+## FULL vs NORMAL synchronous pragma
+FULL = Flushes journal twice as described + (redundant) CRC per page
+NORMAL = Single flush, CRC only
+
+Thus in normal mode, the header which contains page count of journal, flushed together with the journal data, could lead to attempting read on a garbage journal, if the page count say is written before the journal finishes writing.
+
+In full mode the count, besides being flushed separately, is stored in a different sector.
+
+## Continue from Cache Spill
+https://sqlite.org/atomiccommit.html
