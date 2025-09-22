@@ -71,5 +71,11 @@ Thus in normal mode, the header which contains page count of journal, flushed to
 
 In full mode the count, besides being flushed separately, is stored in a different sector.
 
-## Continue from Cache Spill
-https://sqlite.org/atomiccommit.html
+## Cache spillage
+These assume db changes fit in memory in user cache. For larger changes, the rollback journal is flushed to disk, an exclusive lock is acquired and changes are written into db as is normal, however, this will repeat if the cache was spilled, with new journal headers appended for each spill, until it no longer spills and can finally delete the log.
+
+## Optimisations
+- counter to track txes to reduce re-reads of same data between txes
+- exclusive access mode: only one process can access - simplifies the commit phase in several ways as it is guaranteed only one connection
+- free leaf pages (pages that contain deleted data) do not get added to rollback journal
+- etc
