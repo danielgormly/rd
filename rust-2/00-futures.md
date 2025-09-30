@@ -214,3 +214,19 @@ Also uses polls, but returns Poll<Option<Item>>. So, a future you can poll more 
 
 ## Sink
 Sink is like the inverse of a Stream. Pour things down the sink. If the sink is full, we can async attempt. An async channel sender.
+
+## Async/await
+
+Basically creates a state machine
+
+```rust
+enum AsyncThing {
+    StepOne(required_vals_step_one),
+    StepTwo(required_vals_step_two),
+    StepThree(required_vals_step_three),
+}
+```
+
+Moving between them requires self-referential data structures, as you need to essentially save the state at each point, yield and poll again with the previous state. To do this in a low-cost way, they came up with pinning.
+
+Cont. from https://youtu.be/9_3krAQtD2k?t=11047
