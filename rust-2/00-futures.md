@@ -8,23 +8,58 @@ Express a value that is not yet ready. Analogous to JS promises. A building bloc
 Futures are implemented through the Future Trait in Rust
 ```rust
 pub trait Future {
-    type Item; // associated type of Future
-    type Error; // failure type of Future
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error>; // where the magic happens
+    type Output;
+    fn poll(&mut self) -> Poll<Self::Output>; // where the magic happens
+}
+
+Poll::Pending
+Poll::Ready(val) // val = successful result
+```
+
+## Notes on poll:
+Attempts to resolve the future into a final value. Does not block if the value is not ready, and is instead woken up when it can make further progress by polling again. `context` can provide a Waker - which wakes up the current task.
+
+- Poll should not be called again after a future has already completed
+- Poll should not be called on a future which cannot make progress
+- Poll should be called when there is progress to make on a future
+- A single wakeup will not poll all events, and poll function should not be called repeatedly in a tight loop
+
+## Naive executor (to remember the model)
+The executor takes a vec of tasks, continuously polls each until they all completed (err or Ready).
+
+```rust
+let ex = Executor;
+ex.run_all(vec![fut_x, fut_y]);
+
+struct Executor(Vec<Future>);
+
+impl Executor {
+    fn run_all(&mut self, futures: Vec<Future>) -> Vec<Result<Future::Item, Future::Error>> {
+        let mut done = 0;
+        let mut results = Vec::with_capacity(futures.len());
+        while done != futures.len() {
+            for (i, f) in futures.iter_mut().enumerate() {
+                match f.poll() {
+                    Ok(Async::Ready(t)) => {
+                        results.push(i, Ok(t));
+                        done += 1;
+                    }
+                    Ok(Async::NotReady) => {
+                        done += 1;
+                        continue;
+                    }
+                    Err(e) => {
+                        results.push(i, Ok(t));
+                    }
+                }
+            }
+        }
+    }
 }
 ```
 
-Poll takes a mutable reference to self, and returns type Poll<T, E> = Result<Async<T>, E>; where Async =
-
-```
-pub enum Async<T> {
-  Ready(T),
-  NotReady,
-}
-```
-
-## Executors
-The runtime that orchestrates asynchronous functions & structures. An naive executor might look like this:
+## Less naive executor
+The runtime that orchestrates asynchronous functions & structures. A naive executor might look like this:
 
 ```rust
 struct Executor(Arc<Mutex<Vec<bool>>>);
@@ -173,3 +208,9 @@ The event loop that drives all Tokio I/O resources. This could be implemented wi
 A reactor, an executor and a timer (timer is just like reactor)!
 
 https://youtu.be/9_3krAQtD2k?t=6635
+
+## futures::Stream
+Also uses polls, but returns Poll<Option<Item>>. So, a future you can poll more than once. Future with an extra ready state.
+
+## Sink
+Sink is like the inverse of a Stream. Pour things down the sink. If the sink is full, we can async attempt. An async channel sender.
