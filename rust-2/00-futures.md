@@ -217,16 +217,44 @@ Sink is like the inverse of a Stream. Pour things down the sink. If the sink is 
 
 ## Async/await
 
-Basically creates a state machine
+Basically creates a state machine at await points i.e. blocking promises, e.g. turning this:
 
 ```rust
-enum AsyncThing {
-    StepOne(required_vals_step_one),
-    StepTwo(required_vals_step_two),
-    StepThree(required_vals_step_three),
+let bar = vec![true];
+async fn example() {
+    let z = bar; // initial state
+    let c = TcpStream::connect("127.0.0.1").await; // block on step 1
+    c.write("foobar").await; // block on step 2
 }
 ```
 
+into this:
+
+```rust
+enum CompilerMadeAsyncBlock {
+    Step0(Vec<bool>),
+    Step1 {
+        z: Vec<bool>,
+        next: impl Future<Output = TcpStream>,
+    },
+    Step2 {
+        c: TcpStream, // Stored here
+        next: impl Future<Output = usize> + 'c // future returning from c.write, note that it depends on TcpStream - now owned by Step2 - thus it is self-referential!
+    },
+}
+```
+
+Step2.next points to Step2.c - this is not able to be represented in Rust safely, as if you move Step2, the absolute pointer of next will no longer point to Step2.c.
+
 Moving between them requires self-referential data structures, as you need to essentially save the state at each point, yield and poll again with the previous state. To do this in a low-cost way, they came up with pinning.
+
+so we break down the top level async function into discrete states, each with their own types. at await/block points, we move through those states until we hit an await point i.e. a future call, who we poll with the *top level* context, that initially will likely turn not ready, which we will return to that top level block too.
+
+at some point, if it progresses well, e.g. when the io returns (epoll, whatever) which calls ctx.waker() - putting the top level task back on the queue, causing a cascade down, progressing everything, so that a state transition can occur again
+
+Typically, one waker per task!
+Depth-first polling (start from top and drill down)
+No copies as data moves between states! Besides the location of the pointers themselves
+
 
 Cont. from https://youtu.be/9_3krAQtD2k?t=11047
