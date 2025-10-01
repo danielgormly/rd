@@ -207,7 +207,7 @@ The event loop that drives all Tokio I/O resources. This could be implemented wi
 ## tokio::runtime
 A reactor, an executor and a timer (timer is just like reactor)!
 
-https://youtu.be/9_3krAQtD2k?t=6635
+cont. from: https://youtu.be/9_3krAQtD2k?t=6635
 
 ## futures::Stream
 Also uses polls, but returns Poll<Option<Item>>. So, a future you can poll more than once. Future with an extra ready state.
@@ -246,7 +246,10 @@ enum CompilerMadeAsyncBlock {
 
 Step2.next points to Step2.c - this is not able to be represented in Rust safely, as if you move Step2, the absolute pointer of next will no longer point to Step2.c.
 
+
 Moving between them requires self-referential data structures, as you need to essentially save the state at each point, yield and poll again with the previous state. To do this in a low-cost way, they came up with pinning.
+
+## My understanding
 
 so we break down the top level async function into discrete states, each with their own types. at await/block points, we move through those states until we hit an await point i.e. a future call, who we poll with the *top level* context, that initially will likely turn not ready, which we will return to that top level block too.
 
@@ -256,5 +259,26 @@ Typically, one waker per task!
 Depth-first polling (start from top and drill down)
 No copies as data moves between states! Besides the location of the pointers themselves
 
+## Pin
 
-Cont. from https://youtu.be/9_3krAQtD2k?t=11047
+```rust
+struct Pin<P>;
+
+// If T: Unpin, it is not sensitive to being moved
+trait Unpin {}; // auto-trait + empty trait: if all its members have this trait
+impl !Unpin for MyType {} // MyType is sensitive to being moved
+
+fn bar<T>(x: Pin<Box<T>>) {}
+fn bar<T>(x: Pin<&mut T>) {
+    // EITHER T will never move again
+    // Or T: Unpin
+}
+```
+
+So I think it works like this:
+* Unpin is an autotrait,basically everything is unpin, meaning value can move in memory
+* impl !Unpin for MyType means that you are making it as sensitive to movement.
+* If you Pin an Unpin type, it is effectively meaningless, except that you can use it in areas where Pin is required.
+* if you Pin a !Unpin type, the compiler will restrict
+
+w async/await, it pins after you make it, because you can move it before the values are actually defined.
