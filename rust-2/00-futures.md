@@ -8,23 +8,58 @@ Express a value that is not yet ready. Analogous to JS promises. A building bloc
 Futures are implemented through the Future Trait in Rust
 ```rust
 pub trait Future {
-    type Item; // associated type of Future
-    type Error; // failure type of Future
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error>; // where the magic happens
+    type Output;
+    fn poll(&mut self) -> Poll<Self::Output>; // where the magic happens
+}
+
+Poll::Pending
+Poll::Ready(val) // val = successful result
+```
+
+## Notes on poll:
+Attempts to resolve the future into a final value. Does not block if the value is not ready, and is instead woken up when it can make further progress by polling again. `context` can provide a Waker - which wakes up the current task.
+
+- Poll should not be called again after a future has already completed
+- Poll should not be called on a future which cannot make progress
+- Poll should be called when there is progress to make on a future
+- A single wakeup will not poll all events, and poll function should not be called repeatedly in a tight loop
+
+## Naive executor (to remember the model)
+The executor takes a vec of tasks, continuously polls each until they all completed (err or Ready).
+
+```rust
+let ex = Executor;
+ex.run_all(vec![fut_x, fut_y]);
+
+struct Executor(Vec<Future>);
+
+impl Executor {
+    fn run_all(&mut self, futures: Vec<Future>) -> Vec<Result<Future::Item, Future::Error>> {
+        let mut done = 0;
+        let mut results = Vec::with_capacity(futures.len());
+        while done != futures.len() {
+            for (i, f) in futures.iter_mut().enumerate() {
+                match f.poll() {
+                    Ok(Async::Ready(t)) => {
+                        results.push(i, Ok(t));
+                        done += 1;
+                    }
+                    Ok(Async::NotReady) => {
+                        done += 1;
+                        continue;
+                    }
+                    Err(e) => {
+                        results.push(i, Ok(t));
+                    }
+                }
+            }
+        }
+    }
 }
 ```
 
-Poll takes a mutable reference to self, and returns type Poll<T, E> = Result<Async<T>, E>; where Async =
-
-```
-pub enum Async<T> {
-  Ready(T),
-  NotReady,
-}
-```
-
-## Executors
-The runtime that orchestrates asynchronous functions & structures. An naive executor might look like this:
+## Less naive executor
+The runtime that orchestrates asynchronous functions & structures. A naive executor might look like this:
 
 ```rust
 struct Executor(Arc<Mutex<Vec<bool>>>);
@@ -172,4 +207,78 @@ The event loop that drives all Tokio I/O resources. This could be implemented wi
 ## tokio::runtime
 A reactor, an executor and a timer (timer is just like reactor)!
 
-https://youtu.be/9_3krAQtD2k?t=6635
+cont. from: https://youtu.be/9_3krAQtD2k?t=6635
+
+## futures::Stream
+Also uses polls, but returns Poll<Option<Item>>. So, a future you can poll more than once. Future with an extra ready state.
+
+## Sink
+Sink is like the inverse of a Stream. Pour things down the sink. If the sink is full, we can async attempt. An async channel sender.
+
+## Async/await
+
+Basically creates a state machine at await points i.e. blocking promises, e.g. turning this:
+
+```rust
+let bar = vec![true];
+async fn example() {
+    let z = bar; // initial state
+    let c = TcpStream::connect("127.0.0.1").await; // block on step 1
+    c.write("foobar").await; // block on step 2
+}
+```
+
+into this:
+
+```rust
+enum CompilerMadeAsyncBlock {
+    Step0(Vec<bool>),
+    Step1 {
+        z: Vec<bool>,
+        next: impl Future<Output = TcpStream>,
+    },
+    Step2 {
+        c: TcpStream, // Stored here
+        next: impl Future<Output = usize> + 'c // future returning from c.write, note that it depends on TcpStream - now owned by Step2 - thus it is self-referential!
+    },
+}
+```
+
+Step2.next points to Step2.c - this is not able to be represented in Rust safely, as if you move Step2, the absolute pointer of next will no longer point to Step2.c.
+
+
+Moving between them requires self-referential data structures, as you need to essentially save the state at each point, yield and poll again with the previous state. To do this in a low-cost way, they came up with pinning.
+
+## My understanding
+
+so we break down the top level async function into discrete states, each with their own types. at await/block points, we move through those states until we hit an await point i.e. a future call, who we poll with the *top level* context, that initially will likely turn not ready, which we will return to that top level block too.
+
+at some point, if it progresses well, e.g. when the io returns (epoll, whatever) which calls ctx.waker() - putting the top level task back on the queue, causing a cascade down, progressing everything, so that a state transition can occur again
+
+Typically, one waker per task!
+Depth-first polling (start from top and drill down)
+No copies as data moves between states! Besides the location of the pointers themselves
+
+## Pin
+
+```rust
+struct Pin<P>;
+
+// If T: Unpin, it is not sensitive to being moved
+trait Unpin {}; // auto-trait + empty trait: if all its members have this trait
+impl !Unpin for MyType {} // MyType is sensitive to being moved
+
+fn bar<T>(x: Pin<Box<T>>) {}
+fn bar<T>(x: Pin<&mut T>) {
+    // EITHER T will never move again
+    // Or T: Unpin
+}
+```
+
+So I think it works like this:
+* Unpin is an autotrait,basically everything is unpin, meaning value can move in memory
+* impl !Unpin for MyType means that you are making it as sensitive to movement.
+* If you Pin an Unpin type, it is effectively meaningless, except that you can use it in areas where Pin is required.
+* if you Pin a !Unpin type, the compiler will restrict
+
+w async/await, it pins after you make it, because you can move it before the values are actually defined.
