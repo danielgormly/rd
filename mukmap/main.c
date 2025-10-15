@@ -210,6 +210,13 @@ height=720\n";
          0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  // Bottom-right (blue)
     };
 
+    // Create Vertex Array Object (VAO) - required for OpenGL 3.2 Core
+    #ifdef __APPLE__
+        GLuint vao;
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+    #endif
+
     // Create Vertex Buffer Object (VBO)
     GLuint vbo;
     glGenBuffers(1, &vbo);
@@ -220,6 +227,14 @@ height=720\n";
     GLint pos_attrib = glGetAttribLocation(program, "position");
     GLint col_attrib = glGetAttribLocation(program, "color");
 
+    printf("Position attribute location: %d\n", pos_attrib);
+    printf("Color attribute location: %d\n", col_attrib);
+
+    if (pos_attrib == -1 || col_attrib == -1) {
+        fprintf(stderr, "Failed to get attribute locations\n");
+        return 1;
+    }
+
     // Position attribute (3 floats, stride 6 floats, offset 0)
     glEnableVertexAttribArray(pos_attrib);
     glVertexAttribPointer(pos_attrib, 3, GL_FLOAT, GL_FALSE,
@@ -229,6 +244,12 @@ height=720\n";
     glEnableVertexAttribArray(col_attrib);
     glVertexAttribPointer(col_attrib, 3, GL_FLOAT, GL_FALSE,
                           6 * sizeof(float), (void*)(3 * sizeof(float)));
+
+    // Check for OpenGL errors
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        fprintf(stderr, "OpenGL error during setup: 0x%x\n", err);
+    }
 
     // Main loop
     bool running = true;
@@ -271,6 +292,9 @@ height=720\n";
     }
 
     // Cleanup
+    #ifdef __APPLE__
+        glDeleteVertexArrays(1, &vao);
+    #endif
     glDeleteBuffers(1, &vbo);
     glDeleteProgram(program);
 
