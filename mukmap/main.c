@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <SDL.h>
+#include "vendor/ini.h"
 // #include <SDL2/SDL.h> // didn't work, but maybe required on Linux
 
 // Mac: OpenGL 3.2+ Core Profile (desktop)
@@ -19,7 +20,8 @@
 #include "stb_ds.h"
 
 // for reading shaders
-char* read_file(const char* path) {
+char* read_file(const char* path)
+{
     FILE* f = fopen(path, "rb");
     if (!f) {
         fprintf(stderr, "Failed to open %s\n", path);
@@ -39,7 +41,8 @@ char* read_file(const char* path) {
 }
 
 // Helper: Compile shader
-GLuint compile_shader(GLenum type, const char* source) {
+GLuint compile_shader(GLenum type, const char* source)
+{
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, NULL);
     glCompileShader(shader);
@@ -58,7 +61,8 @@ GLuint compile_shader(GLenum type, const char* source) {
 }
 
 // Helper: Create shader program
-GLuint create_program(const char* vert_path, const char* frag_path) {
+GLuint create_program(const char* vert_path, const char* frag_path)
+{
     char* vert_source = read_file(vert_path);
     char* frag_source = read_file(frag_path);
 
@@ -97,7 +101,51 @@ GLuint create_program(const char* vert_path, const char* frag_path) {
     return program;
 }
 
-int main(int argc, char* argv[]) {
+typedef struct
+{
+    int version;
+    int width;
+    int height;
+} config_type;
+
+
+static int handler(void* config, const char* section, const char* name, const char* value)
+{
+    config_type* pconfig = (config_type*)config;
+
+    #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
+    if (MATCH("", "width")) {
+        pconfig->width = atoi(value);
+    } else if (MATCH("", "height")) {
+        pconfig->height = atoi(value);
+    } else {
+        return 1; // Skip unknown
+    }
+    return 1;
+}
+
+int main(int argc, char* argv[])
+{
+    (void)argc;  // Unused
+    (void)argv;  // Unused
+
+    // parse ini
+    const char* raw_config = "version=0\n\
+width=960\n\
+height=720\n";
+
+    config_type config = {
+        .version = 0,
+        .width = 320,
+        .height = 240
+    };
+
+    if (ini_parse_string(raw_config, handler, &config) < 0) {
+        printf("Failed to load config");
+        return 1;
+    };
+    printf("config loaded from 'test.ini': version=%d, width=%d, height=%d", config.version, config.width, config.height);
+
     // Init SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
@@ -118,18 +166,11 @@ int main(int argc, char* argv[]) {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    // Create window
-    #ifdef __APPLE__
-        const int width = 640, height = 480;
-    #else
-        const int width = 320, height = 240;
-    #endif
-
     SDL_Window* window = SDL_CreateWindow(
-        "Bike GPS",
+        "mukmap",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        width, height,
+        config.width, config.height,
         SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN
     );
 
@@ -163,11 +204,6 @@ int main(int argc, char* argv[]) {
         -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  // Bottom-left (green)
          0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  // Bottom-right (blue)
     };
-
-    // Create Vertex Array Object (VAO)
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
 
     // Create Vertex Buffer Object (VBO)
     GLuint vbo;
@@ -214,7 +250,6 @@ int main(int argc, char* argv[]) {
 
         // Draw triangle
         glUseProgram(program);
-        glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
         // Swap buffers
@@ -232,7 +267,6 @@ int main(int argc, char* argv[]) {
 
     // Cleanup
     glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
     glDeleteProgram(program);
 
     SDL_GL_DeleteContext(gl_context);
