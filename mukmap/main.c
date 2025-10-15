@@ -190,8 +190,13 @@ height=720\n";
     printf("OpenGL Version: %s\n", glGetString(GL_VERSION));
     printf("GLSL Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-    // Create shader program
-    GLuint program = create_program("vertex.glsl", "fragment.glsl");
+    // Create shader program (use platform-specific shaders)
+    #ifdef __APPLE__
+        GLuint program = create_program("vertex_mac.glsl", "fragment_mac.glsl");
+    #else
+        GLuint program = create_program("vertex.glsl", "fragment.glsl");
+    #endif
+
     if (!program) {
         fprintf(stderr, "Failed to create shader program\n");
         return 1;
