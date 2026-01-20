@@ -38,4 +38,13 @@ To fulfill these conditions,
 To break ties in the above logical clock system, ≺. Precisely, that means
 a => b iff C(a) < C(b) OR C(a) == C(b) AND Pi ≺ Pj.
 
-Continue from p561
+## Example algorithm
+A resource scheduling algorithm is described using the above Clock where a group of processes synchronise queue states to build a shared total order amongst all nodes with the purpose of allowing a single process to request a resource - granted it has requested the resource before all others (in total message order). The algorithm requires all nodes to be active, otherwise the system halts to a dead state.
+
+## Anomalous behaviour
+We can have non-timestamped events that can be observed as part of the causal chain in which timestamped events occur in a distributed system, that do not concur with the timestamp sequences within the system.
+
+A strong clock condition would hold here.
+
+## Physical clocks
+So this part is more difficult but basically it shows that we can engineer solutions that attempt to maintain certain conditions that once maintained can guarantee that causally succeeding events will take on a later physical timestamp. It describes clock sync in distributed systems basically.
