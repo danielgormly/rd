@@ -48,3 +48,7 @@ A strong clock condition would hold here.
 
 ## Physical clocks
 So this part is more difficult but basically it shows that we can engineer solutions that attempt to maintain certain conditions that once maintained can guarantee that causally succeeding events will take on a later physical timestamp. It describes clock sync in distributed systems basically.
+
+## In summary
+
+This paper was about causal ordering which can provide a partial order, introducing total ordering through a tie breaker, demonstrating a mutex algo based on that total ordering system, then finally introducing a general purpose physical clock that respects the same mechanism but that if certain conditions are met (can be difficult to obtain), guarantees monotonic timestamps across causal boundaries.
