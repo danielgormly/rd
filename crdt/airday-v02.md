@@ -113,24 +113,34 @@ Your "live" CRDT may look quite different to an operation in transport, and a li
 
 ## Timestamps, incl. clock skew / HLCs
 
-Logical clock
+2 people updating an event’s start time:
+- Today @ 3:54pm local time: Update start time to 2:00pm: (client a, 4)
+- Today @ 5:55pm local time: Update start time to 2:30pm: (client b, 1)
 
-Microseconds vs nano-seconds
+Final merged result:
+{
+	start_time: {
+		value: utc_timestamp of 2:30pm,
+		lww_timestamp: HLC (milliseconds + ticks),
+	},
+}
+
+HLC is good esp. in an E2EE context. We have to trust client's clocks. Worst case incl. when a client's clock is really far ahead and so wins everything, this is where the monotonic part kicks in. For this particular piece of context, the absolute worst that could happen here is that the client would fake old or new clocks. Old clocks could alter the history to seem unlikely or impossible. New clocks could alter the history to be impossibly positioned in the future in comparison to local clock. At worst - clocks could occupy positions towards the end of the possible range of integers - for this reason we can have our clients ignore operations with LWW timestamps that are a little too forward or backward - that can even change over time.
+
+In general all our devices should eventually resolve with NTP. If NTP is broken we have bigger problems.
+
+We could make some kind of monotonic single integer clock in millisecond or microsecond resolution but you open yourself up to clock skew for many repeated events (e.g. mass clock creations when you import data) - obvs. more noticeable on a millisecond res clock.
+
 BigInt vs 53-bit integers
+We need perfectly comparable timestamps across web & other platforms. For ease of use, if they can fit into a 53-bit int thus in a 64 bit floating point (Native JS Number) this is the easiest way to go.
 
-HLC?
+For a tie breaker, we can use our (actor, counter) id.
 
-Wall clock?
+## Analyzing the offline for 3 months problem (?) / clock skew problems
 
-Tie-breakers
+## Identifiers
 
-## Analyzing the offline for 3 months problem (?)
-
-## Dots
-
-Provides an addressable history
-
-(actor, counter)
+(actor, counter) on our operations themselves provides an addressable history (WHY IS THIS SUPERIOR TO unique IDs?)
 
 ## Delete & Tombstones
 
@@ -177,6 +187,8 @@ This is an alternative to Version Vectors & creates a stronger "happens-before" 
 ## End-to-end Encryption
 
 I won't go over exactly how I achieved end to end encryption here, but I will go into a couple caveats.
+
+The threat/trust model is totally changed. Server validation does not exist. Clients can send literal junk without server awareness. So we're moving from a centralised server is the data arbiter, to where the clients are. The sync itself could be P2P or through a stable relay node aka server.
 
 You need some protection against faulty or malicious clients & to build resiliency against mismatched server/client combos, stale data etc. Ideally, you only invite high trust clients into your domain.
 
