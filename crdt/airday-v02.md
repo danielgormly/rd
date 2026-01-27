@@ -2,6 +2,8 @@
 
 This covers my experience as a builder, building a LWW-Register map for use in my upcoming productivity app [Airday](https://air.day/). I wanted a key-value object replicated across devices with offline edits, E2EE that converges deterministically. I evaluate several design options & explain how I integrate them into the the application.
 
+There are CRDTs out there but probably suffice, however I want to understand mine deeply & keep my primary app very low dependency.
+
 This article is a product of my own research as a developer trying to build a local-first app. I wanted to assemble a simple key-value state object that is guaranteed to converge on the same state across multiple, asynchronous devices. This is a fundmamental primitive for building local-first applications. We will explore various choices you can make that provide different guarantees & both intrinsic to the CRDT and how they are transported.
 
 There are also a lot of existing solutions around for CRDTs. I will not be looking at any of these libraries, but hopefully this info will help you evaluate the popular libraries.
@@ -45,6 +47,8 @@ It is sometimes useful to divide CRDTs into "state-based" and "operation-based" 
 
 The specific & formal mathematical foundations are useful to understand and are linked below.
 
+The CRDT/offline tradeoffs are additional complexity & lugging around historical data to keep everyone in sync.
+
 `a.merge(a, b)`
 
 ## Order theory
@@ -81,6 +85,22 @@ We're going to extend the single LWW-Register CRDT into a LWW-Register map. Inst
   "occupation": {
     "timestamp": 2,
     "value": null,
+  }
+}
+```
+
+```javascript
+LWWRegister {
+  timestamp: {
+    utc: number,
+    pid: number,
+  },
+  data: any,
+  // We will go into comparison details later
+  function merge(other: LWWRegister) {
+    if (other.timestamp > this.timestamp) {
+      return other;
+    }
   }
 }
 ```
@@ -157,6 +177,8 @@ This is an alternative to Version Vectors & creates a stronger "happens-before" 
 ## End-to-end Encryption
 
 I won't go over exactly how I achieved end to end encryption here, but I will go into a couple caveats.
+
+You need some protection against faulty or malicious clients & to build resiliency against mismatched server/client combos, stale data etc. Ideally, you only invite high trust clients into your domain.
 
 ## Transport
 

@@ -9,10 +9,6 @@ pubDate: 'Aug 30 2025'
 
 <hr style="max-width: initial" />
 
-Airday is a local-first, privacy respecting reminders/calendar/tasks app I'm building.
-
-I want a simple, very low footprint, very fast, cross-platform, low-dependency, e2ee local-first sync engine that is robust & that I can easily reason about.
-
 The promise of CRDTs is that you don't need to deal with insane distributed systems algorithms; skipping CAP. The tradeoffs is that in the process of moving conflict resolution into the data structure, you usually end up with more data, your empower clients that you don't have control over and especially when you're E2EE - you allow clients to add bad data into the database. You need to protect against faulty clients and malicious clients. You also need to build resiliency against mismatched server/client combos in either direction (forward & back compatibility). Ideally, you only invite high trust clients into your domain.
 
 ## Evaluation of what's out there
@@ -36,22 +32,6 @@ All clients should be able to create libraries, lists & items whether they're of
 
 ## LWW-Registers
 This is the fundamental building block of sync. It is a very simple CRDT. In essence it is a timestamp + a piece of data, with a few extra details to ensure everything works together.
-
-```javascript
-LWWRegister {
-  timestamp: {
-    utc: number,
-    pid: number,
-  },
-  data: any,
-  // We will go into comparison details later
-  fn merge(other: LWWRegister) {
-    if (other.timestamp > this.timestamp) {
-      return other;
-    }
-  }
-}
-```
 
 Let's say you have 2 clients A & B. cA produces an item where text="hello", then cB update that item witth text="goodbye", generating a newer timestamp, after exchanging updates, in any order, through any client that implements the merge correctly, all clients converge on item.text="goodbye".
 
