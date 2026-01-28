@@ -2,15 +2,13 @@
 
 This covers my experience as a builder, building a LWW-Register map for use in my upcoming productivity app [Airday](https://air.day/). I wanted a key-value object replicated across devices with offline edits, E2EE that converges deterministically. I evaluate several design options & explain how I integrate them into the the application.
 
-There are CRDTs out there but probably suffice, however I want to understand mine deeply & keep my primary app very low dependency.
+There are many more comprehensively tested & more performant CRDTs out there but probably suffice, however I want to understand mine deeply & keep dependencies low on my data core.
 
 This article is a product of my own research as a developer trying to build a local-first app. I wanted to assemble a simple key-value state object that is guaranteed to converge on the same state across multiple, asynchronous devices. This is a fundmamental primitive for building local-first applications. We will explore various choices you can make that provide different guarantees & both intrinsic to the CRDT and how they are transported.
 
 There are also a lot of existing solutions around for CRDTs. I will not be looking at any of these libraries, but hopefully this info will help you evaluate the popular libraries.
 
 My next planned article is to look at how I use all this theory to design my calendar object CRDT for my upcoming productivity app, [Airday](https://air.day/).
-
-## A rough CRDT timeline
 
 ## Existing libraries
 There are several CRDT libraries around like:
@@ -105,11 +103,15 @@ LWWRegister {
 }
 ```
 
-This is obviously useful for encapsulating attributes of the same conceptual object.
+Objects are obviously useful for encapsulating attributes of the same conceptual object.
 
 ## Snapshots, caches & operations
 
-Your "live" CRDT may look quite different to an operation in transport, and a little different to the cached version. You
+Your "live" CRDT may look quite different to an operation in transport, and a little different to the cached version. It took me a minute to understand that a "CRDT". Snapshots are accelerators as they allow new clients or not up to date clients to catch up to a snapshot defined by another client - however they require substantial trust in the client making the snapshot - this is where a DAG can be superior (TODO: Proof?).
+
+A CRDT thus is a collection of data type that can be composed of discrete chunks as well as the set of algorithms that can merge them together to create a serialisable output.
+
+Materialisation is the process of taking that serialisable output into an object in the app's domain.
 
 ## Timestamps, incl. clock skew / HLCs
 
@@ -134,21 +136,27 @@ We could make some kind of monotonic single integer clock in millisecond or micr
 BigInt vs 53-bit integers
 We need perfectly comparable timestamps across web & other platforms. For ease of use, if they can fit into a 53-bit int thus in a 64 bit floating point (Native JS Number) this is the easiest way to go.
 
-For a tie breaker, we can use our (actor, counter) id.
-
-## Analyzing the offline for 3 months problem (?) / clock skew problems
+For a tie breaker, we can use the (actor, counter) id.
 
 ## Identifiers
 
-(actor, counter) on our operations themselves provides an addressable history (WHY IS THIS SUPERIOR TO unique IDs?)
+`(actor, counter)`
+
+(actor, counter) on our operations themselves provides an addressable history so that we can make version vectors work. They also allow for a partial ordering of all operations on each actor.
+
+A UUID could work but we lose per actor per document partial ordering so we can't rely on version vectors.
+
+Where do we get the actor from? You would generally tie it to the device, which can only publish one update concurrently, unlike a single account. The actor could use an arbitrary UUID, or it could derive bytes from the public encryption key.
+
+## TODO, maybe: Analyzing the offline for 3 months problem (?) / clock skew problems
 
 ## Delete & Tombstones
 
-This is where you may have to bring in OR-Set - i.e if your individual is part of a set.
+This is where you may have to bring in OR-Set - i.e if your individual is part of a set. As I'm going with a many small documents architecture, my OR-set is more implicit over the major project collection. This allows me to keep the entire history on the server but tombstones can be compressed on clients.
 
 ## Snapshots & compaction
 
-Compaction implies removal of history, so you need to decide if this is acceptable or not.
+Compaction implies removal of history, so you need to decide if this is acceptable or not. For Airday, I allow clients to catch up quickly
 
 ## "Causality" in LWW-Registers
 
@@ -178,10 +186,9 @@ For the record, Vector Clocks are a near-identical concept, but explicitly defin
 
 ## Explicit "seen-before" through a Merkle-DAG
 
+Introducing a DAG through hashes on object metadata could replace VVs as well IDs and allow for more solid integrity checks and better evidence of causal tampering. I felt that this was going too far.
+
 This is an alternative to Version Vectors & creates a stronger "happens-before" claim that takes the last hash or set of hashes, the "heads" and also computes a new hash. The hashes are both addressable and can be used to verify the causal claims. You could theoretically still tamper with this by selectively choosing older hashes, for example, or a set of hashes that don't quite make sense, but it is more tamper-evident.
-
-## Materialisation
-
 
 
 ## End-to-end Encryption
