@@ -13,10 +13,11 @@ My next planned article is to look at how I use all this theory to design my cal
 ## Contents
 
 <ol class="!list-none">
-  <li><a href="#1-introduction">1. Concepts</a></li>
+  <li><a href="#1-prerequisite-concepts">1. Prerequisite concepts</a></li>
   <li><a href="#2-crdt-design">2. CRDT Design</a></li>
   <li><a href="#3-crdt-synchronisation">3. CRDT Synchronisation</a></li>
-  <li><a href="#3-storaging-and-loading">3. Storing and loading</a></li>
+  <li><a href="#4-storaging-and-loading">4. Storing and loading</a></li>
+  <li><a href="#5-references">5. References</a></li>
 </ol>
 
 ## Existing libraries
@@ -28,7 +29,7 @@ There are several CRDT libraries around like:
 
 If you want list or text you probably want one of these.
 
-## 1.0 Last Write Wins
+## 1.0 Conceptual introduction
 
 Last Write Wins is a very simple concept, once you've defined what "last" means. In a 1 server - n clients model, you can maintain a piece of authoritative state on the server, let's say we update the `name` key to `Ernie` on resource id `ernie_1944`. Clients can request to update `ernie`, even concurrently. The server ultimately sequences the events i.e. processes each event, one after the other and the last update it processes will become the new piece of authoritative state. In the signle server model, the *last request that has hit the server* wins.
 
@@ -44,9 +45,9 @@ To increase availability, we can clone the store and place copies closer to pote
 
 Synchronisation is when two spatially separate things, to an independent observer, appear the same. Synchronised swimming is an easy way to understand this. Two people are next to each other in the water but they are doing the same things at the same time. You can focus on one and reasonably expect that the other will be doing the same thing - that is at any one time their state is consistent. So proper synchronisation delivers consistency across nodes.
 
-CAP Theorem shows that a distributed data store must make sacrifice one of Consistency, Availability and Partition Tolerance. TODO: Brewer's Conjecture. This is a useful framework to consider when making decisions in distributed systems.
+CAP Theorem shows that a distributed data store must make sacrifice one of Consistency, Availability and Partition Tolerance. This is a useful framework to consider when making decisions in distributed systems. CRDTs give us a formalised means of building strong, eventual consistency. It is important to note too that you can not use CRDTs everywhere.
 
-### 1.2 CRDT design & Merging
+### 1.2 CRDT design & merging
 
 Conflict-Free Replicated Data Types are data structures that can be received in any order, any amount of times & will always converge to the same thing. They guarantee what is called "strong, eventual consistency". That is, once all state updates have been shared between n nodes, the state at all n nodes is guaranteed to converge to the same end result.
 
@@ -56,14 +57,12 @@ The specific & formal mathematical foundations are useful to understand and are 
 
 The CRDT/offline tradeoffs are additional complexity & lugging around historical data to keep everyone in sync.
 
-`a.merge(a, b)`
-
 ## 1.3 Order theory
 Order theory goes deep, to read the average CRDT paper, you shouldn't need too much of it, but you will need to understand the basics of set theory & order theory.
 
 ## 2.0 The design
 
-## The humble LWW-Register CRDT
+## 2.1 The humble LWW-Register CRDT
 
 ```json
  {
@@ -100,10 +99,10 @@ let b = new LWWRegister(2, 'Jon');
 a.merge(b); // resolves to b
 ```
 
-## 2.1 Operations vs State based
+## 2.2 Operations vs State based
 The LWW Register is best thought of as a state based CRDT, because you are replacing the entire state (or not at all) with each merge. The LWW Register Map as shown below is better thought of as an operation based CRDT but the line blurs somewhat in implementation as we will see.
 
-## 2.2 Turning the LWW-Register CRDT into a map
+## 2.3 Turning the LWW-Register CRDT into a map
 We're going to extend the single LWW-Register CRDT into a LWW-Register map. Instead of 2 LWW-Registers of `Ernie` and `42`, we can have:
 
 ```json
@@ -129,21 +128,7 @@ However, because we are treating it like a single object that is meant to materi
 
 Libraries like YJS and Automerge use "documents" as their primary entrypoint. The "CRDT" nomenclature is more an implementation detail.
 
-## Serialising ops
-
-I usually think of the CRDT as the live, in-memory, data structure along with its merge rules. But usually we don't create a "CRDT" to send between devices. We send operations that are later merged together using a known algorithm.
-
-In my app, I do not have a separate data structure for each in my case as they are effectively the same thing, but I do have different parents `SyncObject` housing & tracking the live object and `SyncOp` which is intended to capture and serialise an opration.
-
-## Snapshots
-
-Snapshots (or checkpoints) can be created to skip over the delivery of all operations and subsequent merges. We can allow trusted clients to take all seen operations on an object, merge the result into a serialisable snapshot which can then be synchronised with other clients.
-
-With an LWW-Register, snapshots are pretty simple. They are pretty much identical to normal operations. When you receive a snapshot and only a snapshot, you forgo history, but you get to the most up-to-date state immediately. Depending on your app's needs, you can send only the snapshot, the snapshot first or only send operations.
-
-In an E2EE context, we have no way to verify if the snapshot's integrity. Clients can send any junk and call it a legit snapshot. Incorrect snapshots will stick out if full operation history is available and you could even handle an incorrect snapshot as an error - you can test it against the full history - but this defies the point of a snapshot.
-
-## Timestamps, incl. clock skew / HLCs
+## 2.2 Timestamps, incl. clock skew / HLCs
 
 2 people updating an event’s start time:
 - Today @ 3:54pm local time: Update start time to 2:00pm: (client a, 4)
@@ -168,7 +153,29 @@ We need perfectly comparable timestamps across web & other platforms. For ease o
 
 For a tie breaker, we can use the (actor, counter) tuple.
 
-## Identifiers
+## TODO, maybe: Analyzing the offline for 3 months problem (?) / clock skew problems
+
+## 2.3 Delete & Tombstones
+
+This is where you may have to bring in OR-Set - i.e if your individual is part of a set. As I'm going with a many small documents architecture, my OR-set is more implicit over the major project collection. This allows me to keep the entire history on the server but tombstones can be compressed on clients.
+
+## 3 CRDT Synchronisation
+
+### 3.0 SyncObjects & SyncOps
+
+I usually think of the CRDT as the live, in-memory, data structure along with its merge rules. But usually we don't create a "CRDT" to send between devices. We send operations that are later merged together using a known algorithm.
+
+In my app, I do not have a separate data structure for each in my case as they are effectively the same thing, but I do have different parents `SyncObject` housing & tracking the live object and `SyncOp` which is intended to capture and serialise an opration.
+
+## 3.1 Snapshots
+
+Snapshots (or checkpoints) can be created to skip over the delivery of all operations and subsequent merges. We can allow trusted clients to take all seen operations on an object, merge the result into a serialisable snapshot which can then be synchronised with other clients.
+
+With an LWW-Register, snapshots are pretty simple. They are pretty much identical to normal operations. When you receive a snapshot and only a snapshot, you forgo history, but you get to the most up-to-date state immediately. Depending on your app's needs, you can send only the snapshot, the snapshot first or only send operations.
+
+In an E2EE context, we have no way to verify if the snapshot's integrity. Clients can send any junk and call it a legit snapshot. Incorrect snapshots will stick out if full operation history is available and you could even handle an incorrect snapshot as an error - you can test it against the full history - but this defies the point of a snapshot.
+
+## 3.2 Identifiers
 
 `(actor, counter)`
 
@@ -177,12 +184,6 @@ For a tie breaker, we can use the (actor, counter) tuple.
 A UUID could work but we lose per actor per document partial ordering so we can't rely on version vectors.
 
 Where do we get the actor from? You would generally tie it to the device, which can only publish one update concurrently, unlike a single account. The actor could use an arbitrary UUID, or it could derive bytes from the public encryption key.
-
-## TODO, maybe: Analyzing the offline for 3 months problem (?) / clock skew problems
-
-## Delete & Tombstones
-
-This is where you may have to bring in OR-Set - i.e if your individual is part of a set. As I'm going with a many small documents architecture, my OR-set is more implicit over the major project collection. This allows me to keep the entire history on the server but tombstones can be compressed on clients.
 
 ## Snapshots & compaction
 
