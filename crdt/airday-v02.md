@@ -8,7 +8,16 @@ This article is a product of my own research as a developer trying to build a lo
 
 There are also a lot of existing solutions around for CRDTs. I will not be looking at any of these libraries, but hopefully this info will help you evaluate the popular libraries.
 
-My next planned article is to look at how I use all this theory to design my calendar object CRDT for my upcoming productivity app, [Airday](https://air.day/).
+My next planned article is to look at how I use all this theory to design my calendar object CRDT.
+
+## Contents
+
+<ol class="!list-none">
+  <li><a href="#1-introduction">1. Concepts</a></li>
+  <li><a href="#2-crdt-design">2. CRDT Design</a></li>
+  <li><a href="#3-crdt-synchronisation">3. CRDT Synchronisation</a></li>
+  <li><a href="#3-storaging-and-loading">3. Storing and loading</a></li>
+</ol>
 
 ## Existing libraries
 There are several CRDT libraries around like:
@@ -37,7 +46,7 @@ Synchronisation is when two spatially separate things, to an independent observe
 
 CAP Theorem shows that a distributed data store must make sacrifice one of Consistency, Availability and Partition Tolerance. TODO: Brewer's Conjecture. This is a useful framework to consider when making decisions in distributed systems.
 
-### 1.2 CRDT
+### 1.2 CRDT design & Merging
 
 Conflict-Free Replicated Data Types are data structures that can be received in any order, any amount of times & will always converge to the same thing. They guarantee what is called "strong, eventual consistency". That is, once all state updates have been shared between n nodes, the state at all n nodes is guaranteed to converge to the same end result.
 
@@ -49,7 +58,7 @@ The CRDT/offline tradeoffs are additional complexity & lugging around historical
 
 `a.merge(a, b)`
 
-## Order theory
+## 1.3 Order theory
 Order theory goes deep, to read the average CRDT paper, you shouldn't need too much of it, but you will need to understand the basics of set theory & order theory.
 
 ## 2.0 The design
@@ -63,11 +72,38 @@ Order theory goes deep, to read the average CRDT paper, you shouldn't need too m
  }
 ```
 
-This is one of, if not the simplest CRDT. It is conceptually similar to the single-server based concept instead of the server sequencing via recieve time, each writer i.e. clients sequences it via a timestamp they add on write. When another client receives an update, they compare the incoming timestamp to the existing timestamp. If the incoming timestamp is greater, they merge that data & timestamp. If the incoming timestamp is less than the existing timestamp, the incoming operation is discarded. If the incoming timestamp is the same, it will need to rely on a secondary deterministic order token.
+This is one of, if not the simplest CRDT. It stores a single value. It is conceptually similar to the single-server based concept instead of the server sequencing via recieve time, each writer i.e. clients sequences it via a timestamp they add on write. When another client receives an update, they compare the incoming timestamp to the existing timestamp. If the incoming timestamp is greater, they merge that data & timestamp. If the incoming timestamp is less than the existing timestamp, the incoming operation is discarded. If the incoming timestamp is the same, it will need to rely on a secondary deterministic order token.
 
 You could use a LWW-Register to track an object, but you would have to write the entire object at every pass. This makes a lot of operations heavier - as you always have to pass around and write the entire object each update. What we will do instead is create a CRDT to track multiple attributes.
 
-## Turning the LWW-Register CRDT into a map
+This class is the bones of an LWW Register CRDT, pedagogical only. Most egregiously, it has a bug on handling concurrent updates that makes its output depend on merge order - violating the C in CRDT. It lacks error handling for genuinely unavoidable conflicts (usually a systemic error), means of deleting, means of unsetting the value and does not track history or causation. Some of this can be added internally, some of this relies on the system that handles the CRDT.
+
+```javascript
+class LWWRegister<T> {
+  timestamp: number;
+  value: T;
+  constructor(timestamp: number, value: T) {
+    this.timestamp = 1;
+    this.value = value;
+  }
+  merge(b: LWWRegister) {
+    if (other.timestamp > this.timestamp) {
+      return other;
+    }
+    return this;
+  }
+}
+
+let a = new LWWRegister(1, 'Jonathan');
+let b = new LWWRegister(2, 'Jon');
+
+a.merge(b); // resolves to b
+```
+
+## 2.1 Operations vs State based
+The LWW Register is best thought of as a state based CRDT, because you are replacing the entire state (or not at all) with each merge. The LWW Register Map as shown below is better thought of as an operation based CRDT but the line blurs somewhat in implementation as we will see.
+
+## 2.2 Turning the LWW-Register CRDT into a map
 We're going to extend the single LWW-Register CRDT into a LWW-Register map. Instead of 2 LWW-Registers of `Ernie` and `42`, we can have:
 
 ```json
@@ -87,31 +123,25 @@ We're going to extend the single LWW-Register CRDT into a LWW-Register map. Inst
 }
 ```
 
-```javascript
-LWWRegister {
-  timestamp: {
-    utc: number,
-    pid: number,
-  },
-  data: any,
-  // We will go into comparison details later
-  function merge(other: LWWRegister) {
-    if (other.timestamp > this.timestamp) {
-      return other;
-    }
-  }
-}
-```
+It is a matter of framing if you think of these as a collection of discrete state-based CRDTs keyed by a string, or a single CRDT. We are simply running merge over each key/val discretely, the merge of each field starts and ends at that field.
 
-Objects are obviously useful for encapsulating attributes of the same conceptual object.
+However, because we are treating it like a single object that is meant to materialise into a single domain object, and we'll record history & do encryption on a partial group of LWW Registers, it's easier to refer to it as an operation based CRDT.
 
-## Snapshots, caches & operations
+Libraries like YJS and Automerge use "documents" as their primary entrypoint. The "CRDT" nomenclature is more an implementation detail.
 
-Your "live" CRDT may look quite different to an operation in transport, and a little different to the cached version. It took me a minute to understand that a "CRDT". Snapshots are accelerators as they allow new clients or not up to date clients to catch up to a snapshot defined by another client - however they require substantial trust in the client making the snapshot - this is where a DAG can be superior (TODO: Proof?).
+## Serialising ops
 
-A CRDT thus is a collection of data type that can be composed of discrete chunks as well as the set of algorithms that can merge them together to create a serialisable output.
+I usually think of the CRDT as the live, in-memory, data structure along with its merge rules. But usually we don't create a "CRDT" to send between devices. We send operations that are later merged together using a known algorithm.
 
-Materialisation is the process of taking that serialisable output into an object in the app's domain.
+In my app, I do not have a separate data structure for each in my case as they are effectively the same thing, but I do have different parents `SyncObject` housing & tracking the live object and `SyncOp` which is intended to capture and serialise an opration.
+
+## Snapshots
+
+Snapshots (or checkpoints) can be created to skip over the delivery of all operations and subsequent merges. We can allow trusted clients to take all seen operations on an object, merge the result into a serialisable snapshot which can then be synchronised with other clients.
+
+With an LWW-Register, snapshots are pretty simple. They are pretty much identical to normal operations. When you receive a snapshot and only a snapshot, you forgo history, but you get to the most up-to-date state immediately. Depending on your app's needs, you can send only the snapshot, the snapshot first or only send operations.
+
+In an E2EE context, we have no way to verify if the snapshot's integrity. Clients can send any junk and call it a legit snapshot. Incorrect snapshots will stick out if full operation history is available and you could even handle an incorrect snapshot as an error - you can test it against the full history - but this defies the point of a snapshot.
 
 ## Timestamps, incl. clock skew / HLCs
 
@@ -136,7 +166,7 @@ We could make some kind of monotonic single integer clock in millisecond or micr
 BigInt vs 53-bit integers
 We need perfectly comparable timestamps across web & other platforms. For ease of use, if they can fit into a 53-bit int thus in a 64 bit floating point (Native JS Number) this is the easiest way to go.
 
-For a tie breaker, we can use the (actor, counter) id.
+For a tie breaker, we can use the (actor, counter) tuple.
 
 ## Identifiers
 
