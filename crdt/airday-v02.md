@@ -1,53 +1,41 @@
 # Designing & handling a key-value CRDT into a local-first app
 
-This covers my experience as a builder, building a LWW-Register map for use in my upcoming productivity app [Airday](https://air.day/). I wanted a key-value object replicated across devices with offline edits, E2EE that converges deterministically. I evaluate several design options & explain how I integrate them into the the application.
+This covers my research and implementation, building a LWW-Register map for use in my upcoming local-first productivity app [Airday](https://air.day/). I wanted a key-value object replicated across devices with offline edits, E2EE that converges deterministically. I evaluate several design options & explain how I integrate them into the the application.
 
-There are many more comprehensively tested & more performant CRDTs out there but probably suffice, however I want to understand mine deeply & keep dependencies low on my data core.
-
-This article is a product of my own research as a developer trying to build a local-first app. I wanted to assemble a simple key-value state object that is guaranteed to converge on the same state across multiple, asynchronous devices. This is a fundmamental primitive for building local-first applications. We will explore various choices you can make that provide different guarantees & both intrinsic to the CRDT and how they are transported.
-
-There are also a lot of existing solutions around for CRDTs. I will not be looking at any of these libraries, but hopefully this info will help you evaluate the popular libraries.
-
-My next planned article is to look at how I use all this theory to design my calendar object CRDT.
+There are many more comprehensively tested & more performant libraries built from CRDT primitives that work well, however I want to understand mine deeply and keep dependencies low on my data core.
 
 ## Contents
 
 <ol class="!list-none">
-  <li><a href="#1-prerequisite-concepts">1. Prerequisite concepts</a></li>
-  <li><a href="#2-crdt-design">2. CRDT Design</a></li>
-  <li><a href="#3-crdt-synchronisation">3. CRDT Synchronisation</a></li>
+  <li><a href="#1-background">1. Background</a></li>
+  <li><a href="#2-airdays-crdt-design">2. Airday's CRDT Design</a></li>
+  <li><a href="#3-synchronisation">3. Synchronisation</a></li>
   <li><a href="#4-storaging-and-loading">4. Storing and loading</a></li>
-  <li><a href="#5-references">5. References</a></li>
+  <li><a href="#5-materialisation">5. Materialisation</a></li>
+  <li><a href="#6-references">6. References</a></li>
 </ol>
 
-## Existing libraries
-There are several CRDT libraries around like:
-- Automerge
-- YJS
-- Loro
-- Cola
+## 1. Background
 
-If you want list or text you probably want one of these.
+### 1.1 Traditional atomic transactions guarantees
 
-## 1.0 Conceptual introduction
+Let's say we have a database row with id `jonathan_1978`. `jonathan_1978` has a `name` value of `Jonathan`. 2 clients request distinct name changes concurrently, one to `Jono` and the other to `Big Jon`. In most default modes of traditional Relational Databases (RDBMS), concurrent transactions affecting the same row will be serialised (i.e. played in sequence), creating a total order for these transactions and ultimately choosing the last to execute, e.g. `SET name = "Big Jon";` is executed after `SET name = "Jono";` and thus we resolve to `Big Jon`.
 
-Last Write Wins is a very simple concept, once you've defined what "last" means. In a 1 server - n clients model, you can maintain a piece of authoritative state on the server, let's say we update the `name` key to `Ernie` on resource id `ernie_1944`. Clients can request to update `ernie`, even concurrently. The server ultimately sequences the events i.e. processes each event, one after the other and the last update it processes will become the new piece of authoritative state. In the signle server model, the *last request that has hit the server* wins.
+SQLite is always a single-writer database, locking the entire database on each write. PostgreSQL by default can have multiple writers but ultimately coordinates write access to the same resources (row-locking as opposed to database-locking), effectively serialising the write requests. In both cases, a total order on conflicting write transactions is achieved simply due to the natural ordering of processing orchestrated by database locks.
 
-Even if two clients make the request at an identical time, the requests will naturally order themselves as they hop through the various forwarding and processing channels (wifi, ethernet, fibre, routers, internal buses, software queues, db transactions, etc). Ultimately we are dealing with a single-master state. The two clients may have received a different view of the world and consequently one will be out of sync and will have to catch up somehow.
+### 1.2 Local-first applications
 
-This is typically the easiest trusted sync model to implement. A single actor has final responsibility and can perfectly sequence a series of incoming events and eventually discard all events but the latest.
+Local-first is a name given to apps that work entirely offline and independent of cloud services and maintain the source of truth for the app's state offline. Optionally, it can then synchronise state P2P or through web services. If you're unfamiliar with the specific benefits of local-first apps, I recommend reading [Ink and Switch's article on local-first software](https://www.inkandswitch.com/essay/local-first/).
 
-### 1.1 Distributing state
+There are many benefits gained by users particularly around data and app ownership and durability, privacy & security. For the builder there are tradeoffs as local-first apps can be considerably more difficult to build. Some problem spaces require a central authority by design, so local-first apps are not always an appropriate solution - e.g. traditional banking.
 
-The drawbacks of a single trusted actor model you have a single point of failure, throughput is limited by a single machine & its available bandwidth and latency is fundamentally limited by proximity to the single node. So while you gain simplicity you lose availability.
+It is important to note that local-first apps differ from "offline-capable" apps. Apple Calendar can be used offline for considerable periods, however 1) you had to add an online account in the first place and 2) the server remains the source of truth making your local offline changes pending requests awaiting server confirmation.
 
-To increase availability, we can clone the store and place copies closer to potential clients (on a CDN, on a database replica, on a phone, etc).
+Local-first inverts this, where the local device is the source of truth; i.e. has authoritative state. So if you have an app on your phone & laptop that can both go offline and still work and sync when possible, you now have multiple writers creating authoritative state, but unlike traditional RDBMS, without central coordination. This is where CRDTs come into play.
 
-Synchronisation is when two spatially separate things, to an independent observer, appear the same. Synchronised swimming is an easy way to understand this. Two people are next to each other in the water but they are doing the same things at the same time. You can focus on one and reasonably expect that the other will be doing the same thing - that is at any one time their state is consistent. So proper synchronisation delivers consistency across nodes.
+### 1.3 Conflict Free Replicated Data Types (CRDTs)
 
-CAP Theorem shows that a distributed data store must make sacrifice one of Consistency, Availability and Partition Tolerance. This is a useful framework to consider when making decisions in distributed systems. CRDTs give us a formalised means of building strong, eventual consistency. It is important to note too that you can not use CRDTs everywhere.
-
-### 1.2 CRDT design & merging
+TODO: GO into order theory here or somewhere else
 
 Conflict-Free Replicated Data Types are data structures that can be received in any order, any amount of times & will always converge to the same thing. They guarantee what is called "strong, eventual consistency". That is, once all state updates have been shared between n nodes, the state at all n nodes is guaranteed to converge to the same end result.
 
@@ -57,10 +45,7 @@ The specific & formal mathematical foundations are useful to understand and are 
 
 The CRDT/offline tradeoffs are additional complexity & lugging around historical data to keep everyone in sync.
 
-## 1.3 Order theory
-Order theory goes deep, to read the average CRDT paper, you shouldn't need too much of it, but you will need to understand the basics of set theory & order theory.
-
-## 2.0 The design
+## 2.0 Airday's CRDT design
 
 ## 2.1 The humble LWW-Register CRDT
 
@@ -251,3 +236,22 @@ A lot of these concepts I found were moderately difficult conceptually for me. S
 - Marc Shapiro's talk
 - Woot paper
 - Cola blogpost
+
+
+## Existing libraries
+There are several CRDT libraries around like:
+- Automerge
+- YJS
+- Loro
+- Cola
+
+If you want list or text you probably want one of these.
+
+
+The drawbacks of a single trusted actor model you have a single point of failure, throughput is limited by a single machine & its available bandwidth and latency is fundamentally limited by proximity to the single node. So while you gain simplicity you lose availability.
+
+To increase availability, we can clone the store and place copies closer to potential clients (on a CDN, on a database replica, on a phone, etc).
+
+Synchronisation is when two spatially separate things, to an independent observer, appear the same. Synchronised swimming is an easy way to understand this. Two people are next to each other in the water but they are doing the same things at the same time. You can focus on one and reasonably expect that the other will be doing the same thing - that is at any one time their state is consistent. So proper synchronisation delivers consistency across nodes.
+
+CAP Theorem shows that a distributed data store must make sacrifice one of Consistency, Availability and Partition Tolerance. This is a useful framework to consider when making decisions in distributed systems. CRDTs give us a formalised means of building strong, eventual consistency. It is important to note too that you can not use CRDTs everywhere.
