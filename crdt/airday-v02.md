@@ -10,7 +10,7 @@ There are many more comprehensively tested & more performant libraries built fro
   <li><a href="#1-background">1. Background</a></li>
   <li><a href="#2-airdays-crdt-design">2. Airday's CRDT Design</a></li>
   <li><a href="#3-synchronisation">3. Synchronisation</a></li>
-  <li><a href="#4-storaging-and-loading">4. Storing and loading</a></li>
+  <li><a href="#4-storage-and-loading">4. Storage and loading</a></li>
   <li><a href="#5-materialisation">5. Materialisation</a></li>
   <li><a href="#6-references">6. References</a></li>
 </ol>
@@ -19,9 +19,9 @@ There are many more comprehensively tested & more performant libraries built fro
 
 ### 1.1 Traditional atomic transactions guarantees
 
-Let's say we have a database row with id `jonathan_1978`. `jonathan_1978` has a `name` value of `Jonathan`. 2 clients request distinct name changes concurrently, one to `Jono` and the other to `Big Jon`. In most default modes of traditional Relational Databases (RDBMS), concurrent transactions affecting the same row will be serialised (i.e. played in sequence), creating a total order for these transactions and ultimately choosing the last to execute, e.g. `SET name = "Big Jon";` is executed after `SET name = "Jono";` and thus we resolve to `Big Jon`.
+Let's say we have a database row with id `jonathan_1978`. `jonathan_1978` has a `name` value of `Jonathan`. 2 clients request distinct name changes concurrently, one to `Jono` and the other to `Big Jon`. In most default modes of traditional Relational Databases (RDBMS), concurrent transactions affecting the same row will run as if serialised (i.e. played in sequence), creating a total order for these transactions and ultimately choosing the last to execute, e.g. `SET name = "Big Jon";` is executed after `SET name = "Jono";` and thus we resolve to `Big Jon`.
 
-SQLite is always a single-writer database, locking the entire database on each write. PostgreSQL by default can have multiple writers but ultimately coordinates write access to the same resources (row-locking as opposed to database-locking), effectively serialising the write requests. In both cases, a total order on conflicting write transactions is achieved simply due to the natural ordering of processing orchestrated by database locks.
+SQLite is always a single-writer database, allowing just a single writer at a time for each database. PostgreSQL by default can have multiple writers but ultimately coordinates write access to the same resources (a combination of row-locking as opposed to database-locking and MVCC rules), effectively serialising the write requests. In both cases, a total order on conflicting write transactions is achieved simply due to the natural ordering of processing orchestrated by database locks.
 
 ### 1.2 Local-first applications
 
@@ -35,22 +35,22 @@ Local-first inverts this, where the local device is the source of truth; i.e. ha
 
 ### 1.3 Conflict Free Replicated Data Types (CRDTs)
 
-CRDTs are a family of data structures and their corresponding methods that allow you to combine incremental pieces of state together, in any order and
+CRDTs are a family of data structures and their corresponding methods that allow you to combine incremental pieces of state together, received in any order, to converge on the exact same result. There are some very easy to understand CRDTs and there are complex CRDTs (usually handling lists & text). Underpinning both are a set of common mathematical properties based in set & order theory.
 
-There are some very easy to understand CRDTs, there are the mathematical properties that underly and there are complex CRDTs to handle lists & text. It is worth understanding the former 2 well, and at least reading a couple of list and text CRDT papers once.
+The G-Counter CRDT (or Grow-only Counter) is very simple and demonstrative. This CRDT provides a shared, monotonic (it can only go in one direction) counter. Each site maintains a set of counters starting with an empty set {}. Site A can record a count of 4 and add it to the set {A:4}, making the total count 4. It can then add 2 making it {A:6}. Site A can send its count to site B which already has {B:2}. Now Site B has both {A:6, B:2}, making the total count 8. Site B can then send both quantities back to site A. {A:6} would be ignored on site A because it's already there - max(6,6) is still 6. Now both sites have {A:6, B2}. As you can see the order of counts doesn't matter, and merging is idempotent (taking the max of each site's counter).
 
-Marc Shapiro [](https://www.youtube.com/watch?v=oyUHd894w18)
+The G-Counter is a state-based CRDT. It is often useful to divide CRDTs into "state-based" and "operation-based" CRDTs, but the distinction can sometimes break down. A state-based CRDT can share the entire current state and operation-based CRDTs can share individual commands.
 
+The G-Counter already reveals some of the underlying properties of CRDTs:
+- Commutative (a ⊔ b = b ⊔ a): The order of application of the merge function does not matter e.g. `merge({A:6, B:2}) = merge({B:2, A:6})`
+- Associative (a ⊔ b) ⊔ c = a ⊔ (b ⊔ c): Deceptively similar to commutativity but not quite. Associativity shows that a change in how operations are grouped (within the same total execution order). concat("hello", concat(" ", "world")) = concat("hello", " ", "world") is associative, but not commutative.
+- Idempotent a ⊔ a = a: Merges can occur more than once on the same data without causing further effects. e.g. in our state-based g-counter, max(6,6) - the key mechanism of merging counters, is idempotent.
 
-TODO: GO into order theory here or somewhere else
+The proto set that holds these identities is a "Join-Semilattice" - a partially ordered set (Poset) that has a join (least upper bound). (TODO: BRUSH UP ON THIS)
 
-Conflict-Free Replicated Data Types are data structures that can be received in any order, any amount of times & will always converge to the same thing. They guarantee what is called "strong, eventual consistency". That is, once all state updates have been shared between n nodes, the state at all n nodes is guaranteed to converge to the same end result.
+I found [Marc Shapiro's talk at Microsoft](https://www.youtube.com/watch?v=oyUHd894w18) very helpful in understanding these properties and a Join-semilattice. He was one of the authors of the paper that formalised and named CRDTs and this talk was given around the same time. Marc talks about CRDTs as offering "strong, eventual consistency" - distinguishing it from the weaker guarantee of "eventual consistency". So "strong, eventual consistency" guarantees that once all state updates have been shared between n nodes, the state at all n nodes will be identical.
 
-It is sometimes useful to divide CRDTs into "state-based" and "operation-based" CRDTs, but the distinction can also break down. A state-based CRDT can share the entire current state and operation-based CRDTs can share commands.
-
-The specific & formal mathematical foundations are useful to understand and are linked below.
-
-The CRDT/offline tradeoffs are additional complexity & lugging around historical data to keep everyone in sync.
+Looking at [Marc's papers](https://scholar.google.com/citations?hl=en&user=mqSQZ0EAAAAJ&view_op=list_works&sortby=pubdate) his background is firmly in distributed computing. Martin Kleppmann and his research company Ink and Switch has also researched CRDTs  in depth, as well as created the library "automerge" but has focused on their use in local-first applications.
 
 ## 2.0 Airday's CRDT design
 
