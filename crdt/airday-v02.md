@@ -35,6 +35,13 @@ Local-first inverts this, where the local device is the source of truth; i.e. ha
 
 ### 1.3 Conflict Free Replicated Data Types (CRDTs)
 
+CRDTs are a family of data structures and their corresponding methods that allow you to combine incremental pieces of state together, in any order and
+
+There are some very easy to understand CRDTs, there are the mathematical properties that underly and there are complex CRDTs to handle lists & text. It is worth understanding the former 2 well, and at least reading a couple of list and text CRDT papers once.
+
+Marc Shapiro [](https://www.youtube.com/watch?v=oyUHd894w18)
+
+
 TODO: GO into order theory here or somewhere else
 
 Conflict-Free Replicated Data Types are data structures that can be received in any order, any amount of times & will always converge to the same thing. They guarantee what is called "strong, eventual consistency". That is, once all state updates have been shared between n nodes, the state at all n nodes is guaranteed to converge to the same end result.
